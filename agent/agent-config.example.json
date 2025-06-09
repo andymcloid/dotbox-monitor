@@ -1,0 +1,18 @@
+{
+  "portalUrl": "http://dotbox.se:3000",
+  "apiKey": "your-secure-api-key-here",
+  "interval": 60000,
+  "hostname": "server-name",
+  "additionalServices": [
+    "nginx",
+    "mysql",
+    "redis",
+    "postgresql"
+  ],
+  "dockerEnabled": true,
+  "customMetrics": {
+    "appName": "MyApp",
+    "environment": "production",
+    "location": "home-datacenter"
+  }
+} 

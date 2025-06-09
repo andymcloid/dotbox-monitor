@@ -1,0 +1,31 @@
+[Unit]
+Description=DotBox Monitor - Network Service Monitoring Dashboard
+After=network.target
+Wants=network.target
+
+[Service]
+Type=simple
+User=pi
+Group=pi
+WorkingDirectory=/home/pi/dotbox-monitor
+ExecStart=/usr/bin/node server.js
+Restart=always
+RestartSec=10
+Environment=NODE_ENV=production
+Environment=PORT=3000
+Environment=ADMIN_PASSWORD=admin123
+
+# Logging
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=dotbox-monitor
+
+# Security settings
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=read-only
+ReadWritePaths=/home/pi/dotbox-monitor
+
+[Install]
+WantedBy=multi-user.target 
