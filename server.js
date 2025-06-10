@@ -39,8 +39,8 @@ database.init().then(async () => {
   
   // Set up real-time broadcasting callback
   healthCheck.setBroadcastCallback(() => {
-    // Throttle broadcasts to avoid spam (max once per 5 seconds)
-    if (!healthCheck.lastBroadcast || Date.now() - healthCheck.lastBroadcast > 5000) {
+    // Light throttle to prevent excessive WebSocket spam (max once per 100ms)
+    if (!healthCheck.lastBroadcast || Date.now() - healthCheck.lastBroadcast > 100) {
       healthCheck.lastBroadcast = Date.now();
       broadcastHealthUpdate();
     }
@@ -332,8 +332,8 @@ const broadcastHealthUpdate = async () => {
   }
 };
 
-// Fallback broadcast every 5 minutes (real-time updates now handle most cases)
-setInterval(broadcastHealthUpdate, 5 * 60 * 1000);
+// Fallback broadcast every 30 seconds (real-time updates now handle most cases, this is just backup)
+setInterval(broadcastHealthUpdate, 30 * 1000);
 
 // History API endpoints
 app.get('/api/services/:id/history', requireAuth, async (req, res) => {
