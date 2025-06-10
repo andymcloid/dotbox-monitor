@@ -329,29 +329,43 @@ class DotBoxMonitor {
 
     loadDetailChart(serviceId, chartHistory) {
         const loadingEl = document.getElementById(`detail-chart-loading-${serviceId}`);
+        const statusLoadingEl = document.getElementById(`status-chart-loading-${serviceId}`);
         const canvasEl = document.getElementById(`detail-chart-${serviceId}`);
+        const statusCanvasEl = document.getElementById(`status-chart-${serviceId}`);
         
-        if (!canvasEl) return;
+        if (!canvasEl || !statusCanvasEl) return;
         
         try {
-            loadingEl.textContent = 'Loading chart data...';
-            loadingEl.style.display = 'block';
+            if (loadingEl) {
+                loadingEl.textContent = 'Loading chart data...';
+                loadingEl.style.display = 'block';
+            }
+            if (statusLoadingEl) {
+                statusLoadingEl.textContent = 'Loading status data...';
+                statusLoadingEl.style.display = 'block';
+            }
             
             // Use WebSocket data if available, otherwise fetch from API
             if (chartHistory && chartHistory.length > 0) {
-                this.renderDetailChart(serviceId, chartHistory);
+                this.renderDetailCharts(serviceId, chartHistory);
             } else {
                 // Fallback to API fetch if no WebSocket data
-                this.fetchAndRenderDetailChart(serviceId);
+                this.fetchAndRenderDetailCharts(serviceId);
             }
         } catch (error) {
-            console.error('Error loading detail chart:', error);
-            loadingEl.textContent = 'Failed to load chart data';
-            canvasEl.style.display = 'none';
+            console.error('Error loading detail charts:', error);
+            if (loadingEl) {
+                loadingEl.textContent = 'Failed to load chart data';
+                canvasEl.style.display = 'none';
+            }
+            if (statusLoadingEl) {
+                statusLoadingEl.textContent = 'Failed to load status data';
+                statusCanvasEl.style.display = 'none';
+            }
         }
     }
 
-    async fetchAndRenderDetailChart(serviceId) {
+    async fetchAndRenderDetailCharts(serviceId) {
         try {
             const response = await fetch(`/api/services/${serviceId}/history?hours=24&limit=50`);
             if (!response.ok) {
@@ -359,84 +373,290 @@ class DotBoxMonitor {
             }
             
             const historyData = await response.json();
-            this.renderDetailChart(serviceId, historyData);
+            this.renderDetailCharts(serviceId, historyData);
         } catch (error) {
             console.error('Error fetching chart data:', error);
             const loadingEl = document.getElementById(`detail-chart-loading-${serviceId}`);
+            const statusLoadingEl = document.getElementById(`status-chart-loading-${serviceId}`);
             if (loadingEl) {
                 loadingEl.textContent = 'Failed to load chart data';
+            }
+            if (statusLoadingEl) {
+                statusLoadingEl.textContent = 'Failed to load status data';
             }
         }
     }
 
-    renderDetailChart(serviceId, historyData) {
+    renderDetailCharts(serviceId, historyData) {
         const loadingEl = document.getElementById(`detail-chart-loading-${serviceId}`);
+        const statusLoadingEl = document.getElementById(`status-chart-loading-${serviceId}`);
         const canvasEl = document.getElementById(`detail-chart-${serviceId}`);
+        const statusCanvasEl = document.getElementById(`status-chart-${serviceId}`);
         
-        if (!canvasEl) return;
+        if (!canvasEl || !statusCanvasEl) return;
         
         if (historyData.length === 0) {
-            loadingEl.textContent = 'No data available yet';
-            canvasEl.style.display = 'none';
+            if (loadingEl) {
+                loadingEl.textContent = 'No data available yet';
+                canvasEl.style.display = 'none';
+            }
+            if (statusLoadingEl) {
+                statusLoadingEl.textContent = 'No status data available yet';
+                statusCanvasEl.style.display = 'none';
+            }
             return;
         }
         
-        // Prepare chart data
-        const chartData = prepareChartData(historyData);
+        // Destroy existing charts if they exist
+        const responseChartKey = `detail-response-${serviceId}`;
+        const statusChartKey = `detail-status-${serviceId}`;
         
-        // Destroy existing chart if it exists
-        const existingChartKey = `detail-${serviceId}`;
-        if (serviceCharts.has(existingChartKey)) {
-            serviceCharts.get(existingChartKey).destroy();
+        if (serviceCharts.has(responseChartKey)) {
+            serviceCharts.get(responseChartKey).destroy();
+        }
+        if (serviceCharts.has(statusChartKey)) {
+            serviceCharts.get(statusChartKey).destroy();
         }
         
-        // Reset gradients for new chart
-        statusGradient = null;
-        statusBackgroundGradient = null;
-        gradientWidth = 0;
-        gradientHeight = 0;
+        // Create Status Chart (first)
+        this.createStatusChart(serviceId, historyData, statusCanvasEl);
         
-        // Create new chart
+        // Create Response Time Chart (second)
+        this.createResponseTimeChart(serviceId, historyData, canvasEl);
+        
+        // Hide loading indicators
+        if (loadingEl) {
+            loadingEl.style.display = 'none';
+            canvasEl.style.display = 'block';
+        }
+        if (statusLoadingEl) {
+            statusLoadingEl.style.display = 'none';
+            statusCanvasEl.style.display = 'block';
+        }
+    }
+
+    createResponseTimeChart(serviceId, historyData, canvasEl) {
+        // Sort by timestamp (oldest first for proper line chart)
+        const sortedData = historyData.sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
+        
+        // Prepare labels and response time data
+        const labels = sortedData.map(entry => {
+            const date = new Date(entry.timestamp);
+            return date.toLocaleTimeString('sv-SE', { hour: '2-digit', minute: '2-digit' });
+        });
+        
+        const responseTimeData = sortedData.map(entry => entry.response_time || 0);
+        
+        // Create chart context
         const ctx = canvasEl.getContext('2d');
         
-        // Force canvas size to prevent Chart.js from resizing infinitely
+        // Force canvas size
         canvasEl.width = 400;
-        canvasEl.height = 250;
+        canvasEl.height = 160;
         canvasEl.style.width = '100%';
-        canvasEl.style.height = '250px';
-        
-        // Update chartData to use gradients for status line
-        chartData.datasets[1].borderColor = function(context) {
-            const chart = context.chart;
-            const {ctx, chartArea} = chart;
-            if (!chartArea) return '#28a745'; // Fallback color
-            return getStatusGradient(ctx, chartArea);
-        };
-        
-        chartData.datasets[1].backgroundColor = function(context) {
-            const chart = context.chart;
-            const {ctx, chartArea} = chart;
-            if (!chartArea) return 'rgba(40, 167, 69, 0.1)'; // Fallback color
-            return getStatusBackgroundGradient(ctx, chartArea);
-        };
-        
-        // Make status line thicker to show gradient better
-        chartData.datasets[1].borderWidth = 3;
+        canvasEl.style.height = '160px';
         
         const chart = new Chart(ctx, {
             type: 'line',
-            data: chartData,
+            data: {
+                labels: labels,
+                datasets: [{
+                    label: 'Response Time (ms)',
+                    data: responseTimeData,
+                    borderColor: '#4a9eff',
+                    backgroundColor: 'rgba(74, 158, 255, 0.1)',
+                    tension: 0.5,
+                    fill: true,
+                    pointRadius: 0,
+                    pointHoverRadius: 4,
+                    borderWidth: 2
+                }]
+            },
             options: {
-                ...getChartOptions(),
-                responsive: false,  // Disable responsive to prevent size issues
-                maintainAspectRatio: false
+                responsive: false,
+                maintainAspectRatio: false,
+                interaction: {
+                    mode: 'index',
+                    intersect: false,
+                },
+                animation: {
+                    duration: 800,
+                    easing: 'easeInOutQuart'
+                },
+                scales: {
+                    x: {
+                        display: true,
+                        title: {
+                            display: true,
+                            text: 'Time',
+                            color: '#ccc'
+                        },
+                        ticks: {
+                            color: '#ccc',
+                            maxTicksLimit: 8
+                        },
+                        grid: {
+                            color: 'rgba(255, 255, 255, 0.1)'
+                        }
+                    },
+                    y: {
+                        display: true,
+                        title: {
+                            display: true,
+                            text: 'Response Time (ms)',
+                            color: '#4a9eff'
+                        },
+                        ticks: {
+                            color: '#4a9eff'
+                        },
+                        grid: {
+                            color: 'rgba(74, 158, 255, 0.1)'
+                        }
+                    }
+                },
+                plugins: {
+                    title: {
+                        display: false
+                    },
+                    legend: {
+                        display: false
+                    },
+                    tooltip: {
+                        backgroundColor: 'rgba(0, 0, 0, 0.9)',
+                        titleColor: '#fff',
+                        bodyColor: '#fff',
+                        borderColor: '#4a9eff',
+                        borderWidth: 2,
+                        cornerRadius: 8
+                    }
+                }
             }
         });
         
-        serviceCharts.set(existingChartKey, chart);
+        serviceCharts.set(`detail-response-${serviceId}`, chart);
+    }
+
+    createStatusChart(serviceId, historyData, canvasEl) {
+        // Sort by timestamp (oldest first for proper line chart)
+        const sortedData = historyData.sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
         
-        loadingEl.style.display = 'none';
-        canvasEl.style.display = 'block';
+        // Prepare labels
+        const labels = sortedData.map(entry => {
+            const date = new Date(entry.timestamp);
+            return date.toLocaleTimeString('sv-SE', { hour: '2-digit', minute: '2-digit' });
+        });
+        
+        // Create background colors based on status
+        const backgroundColors = sortedData.map(entry => {
+            switch(entry.status) {
+                case 'healthy': return 'rgba(40, 167, 69, 0.8)';
+                case 'warning': return 'rgba(255, 193, 7, 0.8)';
+                case 'unhealthy': return 'rgba(234, 76, 136, 0.8)';
+                default: return 'rgba(108, 117, 125, 0.8)';
+            }
+        });
+        
+        const borderColors = sortedData.map(entry => {
+            switch(entry.status) {
+                case 'healthy': return '#28a745';
+                case 'warning': return '#ffc107';
+                case 'unhealthy': return '#ea4c88';
+                default: return '#6c757d';
+            }
+        });
+        
+        // Use numeric values for bar height (all same height, color shows status)
+        const statusValues = sortedData.map(() => 1);
+        
+        // Create chart context
+        const ctx = canvasEl.getContext('2d');
+        
+        // Force canvas size
+        canvasEl.width = 400;
+        canvasEl.height = 120;
+        canvasEl.style.width = '100%';
+        canvasEl.style.height = '120px';
+        
+        const chart = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: labels,
+                datasets: [{
+                    label: 'Status',
+                    data: statusValues,
+                    backgroundColor: backgroundColors,
+                    borderColor: borderColors,
+                    borderWidth: 1,
+                    barThickness: 'flex',
+                    maxBarThickness: 20
+                }]
+            },
+            options: {
+                responsive: false,
+                maintainAspectRatio: false,
+                interaction: {
+                    mode: 'index',
+                    intersect: false,
+                },
+                animation: {
+                    duration: 600,
+                    easing: 'easeInOutQuart'
+                },
+                scales: {
+                    x: {
+                        display: true,
+                        title: {
+                            display: true,
+                            text: 'Time',
+                            color: '#ccc'
+                        },
+                        ticks: {
+                            color: '#ccc',
+                            maxTicksLimit: 8
+                        },
+                        grid: {
+                            color: 'rgba(255, 255, 255, 0.1)'
+                        }
+                    },
+                    y: {
+                        display: false, // Hide Y-axis since all bars are same height
+                        max: 1.2,
+                        min: 0
+                    }
+                },
+                plugins: {
+                    title: {
+                        display: false
+                    },
+                    legend: {
+                        display: false
+                    },
+                    tooltip: {
+                        backgroundColor: 'rgba(0, 0, 0, 0.9)',
+                        titleColor: '#fff',
+                        bodyColor: '#fff',
+                        borderColor: '#ccc',
+                        borderWidth: 2,
+                        cornerRadius: 8,
+                        callbacks: {
+                            label: function(context) {
+                                const dataIndex = context.dataIndex;
+                                const status = sortedData[dataIndex].status;
+                                const statusText = status === 'healthy' ? '🟢 Healthy' :
+                                                 status === 'warning' ? '🟡 Warning' :
+                                                 status === 'unhealthy' ? '🔴 Unhealthy' : '⚫ Unknown';
+                                return statusText;
+                            },
+                            title: function(context) {
+                                return `Time: ${context[0].label}`;
+                            }
+                        }
+                    }
+                }
+            }
+        });
+        
+        serviceCharts.set(`detail-status-${serviceId}`, chart);
     }
 
     async refreshHealth() {
@@ -604,24 +824,40 @@ class DotBoxMonitor {
         // Remove charts for services that no longer exist in DOM
         const orphanedCharts = [];
         
-        serviceCharts.forEach((chart, serviceId) => {
-            const canvasEl = document.getElementById(`chart-${serviceId}`);
-            const detailCanvasEl = document.getElementById(`detail-chart-${serviceId}`);
-            if (!canvasEl && !detailCanvasEl) {
-                orphanedCharts.push(serviceId);
+        serviceCharts.forEach((chart, chartKey) => {
+            // Check for different chart types
+            if (chartKey.startsWith('detail-response-')) {
+                const serviceId = chartKey.replace('detail-response-', '');
+                const canvasEl = document.getElementById(`detail-chart-${serviceId}`);
+                if (!canvasEl) {
+                    orphanedCharts.push(chartKey);
+                }
+            } else if (chartKey.startsWith('detail-status-')) {
+                const serviceId = chartKey.replace('detail-status-', '');
+                const statusCanvasEl = document.getElementById(`status-chart-${serviceId}`);
+                if (!statusCanvasEl) {
+                    orphanedCharts.push(chartKey);
+                }
+            } else {
+                // Legacy chart cleanup
+                const canvasEl = document.getElementById(`chart-${chartKey}`);
+                const detailCanvasEl = document.getElementById(`detail-chart-${chartKey}`);
+                if (!canvasEl && !detailCanvasEl) {
+                    orphanedCharts.push(chartKey);
+                }
             }
         });
         
-        orphanedCharts.forEach(serviceId => {
+        orphanedCharts.forEach(chartKey => {
             try {
-                const chart = serviceCharts.get(serviceId);
+                const chart = serviceCharts.get(chartKey);
                 if (chart) {
                     chart.destroy();
                 }
             } catch (error) {
-                console.warn(`Error destroying orphaned chart ${serviceId}:`, error);
+                console.warn(`Error destroying orphaned chart ${chartKey}:`, error);
             }
-            serviceCharts.delete(serviceId);
+            serviceCharts.delete(chartKey);
         });
         
         if (orphanedCharts.length > 0) {
@@ -662,21 +898,13 @@ class DotBoxMonitor {
     }
 
     updateDetailPaneLive(service) {
-        // Update only the dynamic parts without full re-render
-        const statusClass = service.status || 'unknown';
-        const statusText = service.status === 'healthy' ? 'Healthy' : 
-                          service.status === 'warning' ? 'Warning' :
-                          service.status === 'unhealthy' ? 'Unhealthy' : 'Unknown';
-
-        // Update status section
-        const statusSection = document.querySelector('.detail-service-status');
-        if (statusSection) {
-            statusSection.className = `detail-service-status ${statusClass}`;
-            const statusTextEl = statusSection.querySelector('.detail-service-status-text');
-            if (statusTextEl) {
-                statusTextEl.className = `detail-service-status-text ${statusClass}`;
-                statusTextEl.textContent = statusText;
-            }
+        // Update traffic light in header
+        const detailPaneTitle = document.getElementById('detailPaneTitle');
+        if (detailPaneTitle) {
+            const statusIndicator = service.status === 'healthy' ? '🟢' : 
+                                   service.status === 'warning' ? '🟡' :
+                                   service.status === 'unhealthy' ? '🔴' : '⚪';
+            detailPaneTitle.textContent = `${statusIndicator} ${service.icon || '🔧'} ${service.name}`;
         }
 
         // Update metrics that can change
@@ -707,17 +935,49 @@ class DotBoxMonitor {
     }
 
     updateDetailChart(serviceId, historyData) {
-        const chartKey = `detail-${serviceId}`;
-        const existingChart = serviceCharts.get(chartKey);
+        const responseChartKey = `detail-response-${serviceId}`;
+        const statusChartKey = `detail-status-${serviceId}`;
+        const responseChart = serviceCharts.get(responseChartKey);
+        const statusChart = serviceCharts.get(statusChartKey);
         
-        if (existingChart && historyData && historyData.length > 0) {
+        if (historyData && historyData.length > 0) {
             try {
-                // Update chart data without destroying/recreating
                 const chartData = this.prepareChartDataForUpdate(historyData);
-                existingChart.data.labels = chartData.labels;
-                existingChart.data.datasets[0].data = chartData.responseTimeData;
-                existingChart.data.datasets[1].data = chartData.statusData;
-                existingChart.update('none'); // No animation for live updates
+                
+                // Update response time chart
+                if (responseChart) {
+                    responseChart.data.labels = chartData.labels;
+                    responseChart.data.datasets[0].data = chartData.responseTimeData;
+                    responseChart.update('none'); // No animation for live updates
+                }
+                
+                // Update status chart
+                if (statusChart) {
+                    statusChart.data.labels = chartData.labels;
+                    
+                    // Update colors based on new status data
+                    const backgroundColors = historyData.map(entry => {
+                        switch(entry.status) {
+                            case 'healthy': return 'rgba(40, 167, 69, 0.8)';
+                            case 'warning': return 'rgba(255, 193, 7, 0.8)';
+                            case 'unhealthy': return 'rgba(234, 76, 136, 0.8)';
+                            default: return 'rgba(108, 117, 125, 0.8)';
+                        }
+                    });
+                    
+                    const borderColors = historyData.map(entry => {
+                        switch(entry.status) {
+                            case 'healthy': return '#28a745';
+                            case 'warning': return '#ffc107';
+                            case 'unhealthy': return '#ea4c88';
+                            default: return '#6c757d';
+                        }
+                    });
+                    
+                    statusChart.data.datasets[0].backgroundColor = backgroundColors;
+                    statusChart.data.datasets[0].borderColor = borderColors;
+                    statusChart.update('none'); // No animation for live updates
+                }
             } catch (error) {
                 console.warn('Error updating chart data:', error);
                 // Fallback to reload if update fails
@@ -788,8 +1048,11 @@ class DotBoxMonitor {
         const finalServiceId = service.id ? service.id.toString() : service.name.toLowerCase().replace(/\s+/g, '-');
         detailPane.setAttribute('data-service-id', finalServiceId);
         
-        // Update title
-        detailPaneTitle.textContent = `${service.icon || '🔧'} ${service.name}`;
+        // Update title with traffic light status
+        const statusIndicator = service.status === 'healthy' ? '🟢' : 
+                               service.status === 'warning' ? '🟡' :
+                               service.status === 'unhealthy' ? '🔴' : '⚪';
+        detailPaneTitle.textContent = `${statusIndicator} ${service.icon || '🔧'} ${service.name}`;
 
         // Render content
         this.renderDetailPaneContent(service);
@@ -812,22 +1075,19 @@ class DotBoxMonitor {
                           service.status === 'unhealthy' ? 'Unhealthy' : 'Unknown';
 
         detailPaneContent.innerHTML = `
-            <div class="detail-service-status ${statusClass}">
-                <div class="detail-service-icon">${service.icon || '🔧'}</div>
-                <div class="detail-service-info">
-                    <h4>${service.name}</h4>
-                    <div class="detail-service-status-text ${statusClass}">${statusText}</div>
+            <div class="detail-chart-section">
+                <h4>Status History (24h)</h4>
+                <div id="status-chart-loading-${serviceId}" class="chart-loading">Loading status data...</div>
+                <div class="detail-chart-container">
+                    <canvas id="status-chart-${serviceId}" class="detail-chart-canvas" width="400" height="120"></canvas>
                 </div>
             </div>
 
             <div class="detail-chart-section">
-                <h4>
-                    Response Time Trend (24h)
-                    <button class="detail-chart-refresh" onclick="refreshDetailChart('${serviceId}')" title="Refresh chart">🔄</button>
-                </h4>
+                <h4>Response Time (24h)</h4>
                 <div id="detail-chart-loading-${serviceId}" class="chart-loading">Loading chart data...</div>
                 <div class="detail-chart-container">
-                    <canvas id="detail-chart-${serviceId}" class="detail-chart-canvas" width="400" height="250"></canvas>
+                    <canvas id="detail-chart-${serviceId}" class="detail-chart-canvas" width="400" height="160"></canvas>
                 </div>
             </div>
 
@@ -959,15 +1219,20 @@ function closeDetailPane() {
     // Destroy any detail charts before closing
     const serviceId = detailPane.getAttribute('data-service-id');
     if (serviceId) {
-        const existingChartKey = `detail-${serviceId}`;
-        if (serviceCharts.has(existingChartKey)) {
-            try {
-                serviceCharts.get(existingChartKey).destroy();
-                serviceCharts.delete(existingChartKey);
-            } catch (error) {
-                console.warn('Error destroying chart on close:', error);
+        const responseChartKey = `detail-response-${serviceId}`;
+        const statusChartKey = `detail-status-${serviceId}`;
+        
+        // Clean up both charts
+        [responseChartKey, statusChartKey].forEach(chartKey => {
+            if (serviceCharts.has(chartKey)) {
+                try {
+                    serviceCharts.get(chartKey).destroy();
+                    serviceCharts.delete(chartKey);
+                } catch (error) {
+                    console.warn(`Error destroying chart ${chartKey} on close:`, error);
+                }
             }
-        }
+        });
     }
     
     detailPane.classList.remove('open');
@@ -982,8 +1247,16 @@ function closeDetailPane() {
 
 function refreshDetailChart(serviceId) {
     if (window.monitor) {
-        // Fetch fresh data and re-render chart
-        window.monitor.fetchAndRenderDetailChart(serviceId);
+        // Get serviceId from detail pane if not provided
+        if (!serviceId) {
+            const detailPane = document.getElementById('detailPane');
+            serviceId = detailPane ? detailPane.getAttribute('data-service-id') : null;
+        }
+        
+        if (serviceId) {
+            // Fetch fresh data and re-render both charts
+            window.monitor.fetchAndRenderDetailCharts(serviceId);
+        }
     }
 }
 

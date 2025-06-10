@@ -78,6 +78,9 @@
         <div class="detail-pane-header">
             <h3 id="detailPaneTitle">Service Details</h3>
             <div class="detail-pane-actions">
+                <button class="detail-pane-btn refresh" id="detailRefreshBtn" onclick="refreshDetailChart(null)" title="Refresh Charts">
+                    🔄 Refresh
+                </button>
                 <button class="detail-pane-btn edit" id="detailEditBtn" onclick="editServiceFromDetail()" title="Edit Service">
                     ✏️ Edit
                 </button>
@@ -210,7 +213,8 @@
                             <div class="form-group">
                                 <label for="serviceInterval">Check Interval (seconds)</label>
                                 <input type="number" id="serviceInterval" name="interval" value="30" min="10" max="3600">
-                            </div>
+                            </
+                            div>
                         </div>
                     </div>
                 </div>

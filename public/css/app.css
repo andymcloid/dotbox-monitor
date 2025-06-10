@@ -994,6 +994,11 @@ sl-select {
     color: white;
 }
 
+.detail-pane-btn.refresh:hover {
+    background: var(--accent-green);
+    border-color: var(--accent-green);
+}
+
 .detail-pane-btn.edit:hover {
     background: var(--accent-blue);
     border-color: var(--accent-blue);
@@ -1047,50 +1052,7 @@ sl-select {
     border-radius: 3px;
 }
 
-/* Detail pane service info */
-.detail-service-status {
-    display: flex;
-    align-items: center;
-    gap: 1rem;
-    padding: 1rem;
-    background: var(--bg-tertiary);
-    border-radius: 8px;
-    margin-bottom: 1.5rem;
-    border: 2px solid var(--border-color);
-}
-
-.detail-service-status.healthy {
-    border-color: var(--accent-green);
-}
-
-.detail-service-status.warning {
-    border-color: var(--accent-orange);
-}
-
-.detail-service-status.unhealthy {
-    border-color: var(--accent-red);
-}
-
-.detail-service-icon {
-    font-size: 2rem;
-}
-
-.detail-service-info h4 {
-    margin: 0 0 0.5rem 0;
-    font-size: 1.1rem;
-    font-weight: 600;
-    color: var(--text-primary);
-}
-
-.detail-service-status-text {
-    font-weight: 500;
-    font-size: 0.9rem;
-}
-
-.detail-service-status-text.healthy { color: var(--accent-green); }
-.detail-service-status-text.warning { color: var(--accent-orange); }
-.detail-service-status-text.unhealthy { color: var(--accent-red); }
-.detail-service-status-text.unknown { color: var(--text-muted); }
+/* Detail pane service info - removed, now using traffic light in header */
 
 .detail-metrics-grid {
     display: grid;
@@ -1122,11 +1084,15 @@ sl-select {
 }
 
 .detail-chart-section {
-    margin-top: 1.5rem;
+    margin-top: 1rem;
     padding: 1rem;
     background: var(--bg-tertiary);
     border-radius: 8px;
     border: 1px solid var(--border-color);
+}
+
+.detail-chart-section:first-child {
+    margin-top: 0;
 }
 
 .detail-chart-section h4 {
@@ -1139,22 +1105,7 @@ sl-select {
     justify-content: space-between;
 }
 
-.detail-chart-refresh {
-    background: none;
-    border: 1px solid var(--border-color);
-    color: var(--text-secondary);
-    padding: 0.25rem 0.5rem;
-    border-radius: 4px;
-    cursor: pointer;
-    font-size: 0.8rem;
-    transition: all 0.2s ease;
-}
-
-.detail-chart-refresh:hover {
-    background: var(--accent-blue);
-    border-color: var(--accent-blue);
-    color: white;
-}
+/* Removed .detail-chart-refresh as refresh button moved to header */
 
 .detail-chart-container {
     position: relative;
@@ -1165,9 +1116,19 @@ sl-select {
 
 .detail-chart-canvas {
     width: 100% !important;
-    height: 250px !important;
-    max-height: 250px !important;
     max-width: 100% !important;
+}
+
+/* Response time chart height */
+canvas[id^="detail-chart-"] {
+    height: 160px !important;
+    max-height: 160px !important;
+}
+
+/* Status chart height */
+canvas[id^="status-chart-"] {
+    height: 120px !important;
+    max-height: 120px !important;
 }
 
 /* Responsive design for detail pane */
