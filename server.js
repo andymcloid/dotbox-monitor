@@ -36,6 +36,16 @@ let healthCheck;
 // Initialize health check after database is ready
 database.init().then(async () => {
   healthCheck = new HealthCheckService(database);
+  
+  // Set up real-time broadcasting callback
+  healthCheck.setBroadcastCallback(() => {
+    // Throttle broadcasts to avoid spam (max once per 5 seconds)
+    if (!healthCheck.lastBroadcast || Date.now() - healthCheck.lastBroadcast > 5000) {
+      healthCheck.lastBroadcast = Date.now();
+      broadcastHealthUpdate();
+    }
+  });
+  
   await healthCheck.init();
 }).catch(err => {
   console.error('Failed to initialize database:', err);
@@ -322,8 +332,8 @@ const broadcastHealthUpdate = async () => {
   }
 };
 
-// Broadcast health updates every 60 seconds to avoid too frequent updates
-setInterval(broadcastHealthUpdate, 60000);
+// Fallback broadcast every 5 minutes (real-time updates now handle most cases)
+setInterval(broadcastHealthUpdate, 5 * 60 * 1000);
 
 // History API endpoints
 app.get('/api/services/:id/history', requireAuth, async (req, res) => {

@@ -123,6 +123,24 @@ class DotBoxMonitor {
     }
 
     setupSocketEvents() {
+        const connectionStatus = document.getElementById('connectionStatus');
+
+        this.socket.on('connect', () => {
+            console.log('🟢 Connected to WebSocket - real-time updates enabled');
+            if (connectionStatus) {
+                connectionStatus.textContent = '🟢';
+                connectionStatus.title = 'WebSocket Connected - Real-time updates';
+            }
+        });
+
+        this.socket.on('disconnect', () => {
+            console.log('🔴 Disconnected from WebSocket');
+            if (connectionStatus) {
+                connectionStatus.textContent = '🔴';
+                connectionStatus.title = 'WebSocket Disconnected - Using manual refresh';
+            }
+        });
+
         this.socket.on('health-overview', (data) => {
             this.overallHealth = data;
             this.updateHealthOverview();
@@ -140,6 +158,12 @@ class DotBoxMonitor {
                 
                 // Update detail pane if it's open
                 this.updateDetailPaneIfOpen(data);
+                
+                // Show that we got real-time data
+                const lastUpdatedEl = document.getElementById('lastUpdatedText');
+                if (lastUpdatedEl) {
+                    lastUpdatedEl.textContent = new Date().toLocaleTimeString() + ' 📡';
+                }
                 
                 this.updateTimeout = null;
             }, 100); // 100ms debounce
@@ -423,28 +447,30 @@ class DotBoxMonitor {
                 this.setupSocketEvents();
             }
             
-            // Request fresh health data
-            if (this.socket) {
+            // Request fresh health data via WebSocket (preferred)
+            if (this.socket && this.socket.connected) {
                 this.socket.emit('request-health-update');
-            }
-            
-            // Also fetch via HTTP
-            const [overviewRes, servicesRes] = await Promise.all([
-                fetch('/api/health/overview'),
-                fetch('/api/health/categories')
-            ]);
-            
-            if (overviewRes.ok && servicesRes.ok) {
-                this.overallHealth = await overviewRes.json();
-                this.services = await servicesRes.json();
-                
-                this.updateHealthOverview();
-                this.renderHealthServices();
+                this.showNotification('Requesting fresh data...', 'info');
             } else {
-                const overviewError = overviewRes.ok ? null : await overviewRes.text();
-                const servicesError = servicesRes.ok ? null : await servicesRes.text();
-                console.error('API responses not OK - Overview:', overviewError, 'Services:', servicesError);
-                this.showNotification('Failed to fetch health data', 'danger');
+                // Fallback to HTTP if WebSocket not connected
+                const [overviewRes, servicesRes] = await Promise.all([
+                    fetch('/api/health/overview'),
+                    fetch('/api/health/categories')
+                ]);
+                
+                if (overviewRes.ok && servicesRes.ok) {
+                    this.overallHealth = await overviewRes.json();
+                    this.services = await servicesRes.json();
+                    
+                    this.updateHealthOverview();
+                    this.renderHealthServices();
+                    this.showNotification('Data refreshed via API', 'success');
+                } else {
+                    const overviewError = overviewRes.ok ? null : await overviewRes.text();
+                    const servicesError = servicesRes.ok ? null : await servicesRes.text();
+                    console.error('API responses not OK - Overview:', overviewError, 'Services:', servicesError);
+                    this.showNotification('Failed to fetch health data', 'danger');
+                }
             }
         } catch (error) {
             console.error('Error refreshing health data:', error);
@@ -485,7 +511,7 @@ class DotBoxMonitor {
                 : `${healthy}/${total}`;
         }
 
-        if (lastUpdatedText) {
+        if (lastUpdatedText && !lastUpdatedText.textContent.includes('📡')) {
             lastUpdatedText.textContent = new Date().toLocaleTimeString();
         }
     }
@@ -630,9 +656,100 @@ class DotBoxMonitor {
         });
 
         if (currentService) {
-            // Update detail pane with new data
-            this.renderDetailPaneContent(currentService);
+            // Update detail pane with live data (smooth updates, no re-rendering)
+            this.updateDetailPaneLive(currentService);
         }
+    }
+
+    updateDetailPaneLive(service) {
+        // Update only the dynamic parts without full re-render
+        const statusClass = service.status || 'unknown';
+        const statusText = service.status === 'healthy' ? 'Healthy' : 
+                          service.status === 'warning' ? 'Warning' :
+                          service.status === 'unhealthy' ? 'Unhealthy' : 'Unknown';
+
+        // Update status section
+        const statusSection = document.querySelector('.detail-service-status');
+        if (statusSection) {
+            statusSection.className = `detail-service-status ${statusClass}`;
+            const statusTextEl = statusSection.querySelector('.detail-service-status-text');
+            if (statusTextEl) {
+                statusTextEl.className = `detail-service-status-text ${statusClass}`;
+                statusTextEl.textContent = statusText;
+            }
+        }
+
+        // Update metrics that can change
+        const updateMetric = (label, value) => {
+            const metrics = document.querySelectorAll('.detail-metric-item');
+            metrics.forEach(metric => {
+                const labelEl = metric.querySelector('.detail-metric-label');
+                const valueEl = metric.querySelector('.detail-metric-value');
+                if (labelEl && valueEl && labelEl.textContent === label) {
+                    valueEl.textContent = value;
+                }
+            });
+        };
+
+        updateMetric('Response Time', `${service.responseTime || 0}ms`);
+        updateMetric('Uptime', `${service.uptime || 0}%`);
+        updateMetric('Last Check', service.timestamp ? new Date(service.timestamp).toLocaleString() : 'Never');
+        
+        if (service.type === 'ssl' && service.daysUntilExpiry !== undefined) {
+            updateMetric('Days Until Expiry', `${service.daysUntilExpiry} days`);
+        }
+
+        // Update chart if new data is available
+        if (service.chartHistory && service.chartHistory.length > 0) {
+            const serviceId = service.id ? service.id.toString() : service.name.toLowerCase().replace(/\s+/g, '-');
+            this.updateDetailChart(serviceId, service.chartHistory);
+        }
+    }
+
+    updateDetailChart(serviceId, historyData) {
+        const chartKey = `detail-${serviceId}`;
+        const existingChart = serviceCharts.get(chartKey);
+        
+        if (existingChart && historyData && historyData.length > 0) {
+            try {
+                // Update chart data without destroying/recreating
+                const chartData = this.prepareChartDataForUpdate(historyData);
+                existingChart.data.labels = chartData.labels;
+                existingChart.data.datasets[0].data = chartData.responseTimeData;
+                existingChart.data.datasets[1].data = chartData.statusData;
+                existingChart.update('none'); // No animation for live updates
+            } catch (error) {
+                console.warn('Error updating chart data:', error);
+                // Fallback to reload if update fails
+                this.loadDetailChart(serviceId, historyData);
+            }
+        }
+    }
+
+    prepareChartDataForUpdate(historyData) {
+        // Sort by timestamp (oldest first for proper line chart)
+        const sortedData = historyData.sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
+        
+        // Prepare labels (timestamps) and data points
+        const labels = sortedData.map(entry => {
+            const date = new Date(entry.timestamp);
+            return date.toLocaleTimeString('sv-SE', { hour: '2-digit', minute: '2-digit' });
+        });
+        
+        // Response time data
+        const responseTimeData = sortedData.map(entry => entry.response_time || 0);
+        
+        // Status data (convert to numeric: healthy=1, warning=0.5, unhealthy=0)
+        const statusData = sortedData.map(entry => {
+            switch(entry.status) {
+                case 'healthy': return 1;
+                case 'warning': return 0.5;
+                case 'unhealthy': return 0;
+                default: return 0;
+            }
+        });
+        
+        return { labels, responseTimeData, statusData };
     }
 
     showServiceDetail(serviceId) {
@@ -1036,18 +1153,12 @@ function prepareChartData(historyData) {
     
     // Status data (convert to numeric: healthy=1, warning=0.5, unhealthy=0)
     const statusData = sortedData.map(entry => {
-        let numericValue;
         switch(entry.status) {
-            case 'healthy': numericValue = 1; break;
-            case 'warning': numericValue = 0.5; break;
-            case 'unhealthy': numericValue = 0; break;
-            default: numericValue = 0; break;
+            case 'healthy': return 1;
+            case 'warning': return 0.5;
+            case 'unhealthy': return 0;
+            default: return 0;
         }
-        
-        // Debug: log status mapping to identify color issue
-        console.log(`Status mapping: ${entry.status} -> ${numericValue}`, entry);
-        
-        return numericValue;
     });
     
     return {
@@ -1334,7 +1445,27 @@ async function deleteService(serviceId) {
     }
 }
 
+// Load minimum check interval from settings
+async function loadMinCheckInterval() {
+    try {
+        const response = await fetch('/api/settings/min_check_interval');
+        if (response.ok) {
+            const data = await response.json();
+            const minInterval = parseInt(data.value) || 10;
+            
+            // Update the form's min attribute
+            const intervalInput = document.getElementById('serviceInterval');
+            if (intervalInput) {
+                intervalInput.min = minInterval;
+            }
+        }
+    } catch (error) {
+        console.warn('Failed to load min check interval setting:', error);
+    }
+}
+
 // Initialize the application
 document.addEventListener('DOMContentLoaded', () => {
     window.monitor = new DotBoxMonitor();
+    loadMinCheckInterval();
 }); 

@@ -105,6 +105,12 @@ body {
     font-weight: 600;
 }
 
+.connection-status {
+    margin-left: 0.5rem;
+    font-size: 0.8rem;
+    transition: opacity 0.3s ease;
+}
+
 .navbar-actions {
     display: flex;
     align-items: center;
