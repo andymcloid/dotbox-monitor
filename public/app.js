@@ -179,11 +179,9 @@ class DotBoxMonitor {
             const needsFullRender = !this.arraysEqual(oldServiceIds.sort(), newServiceIds.sort());
             
             if (needsFullRender) {
-                // Store expanded states before full re-render
-                const expandedServices = this.getExpandedServiceStates();
+                // Full re-render needed
                 this.services = newServicesData;
                 this.renderHealthServices();
-                this.restoreExpandedServiceStates(expandedServices);
                 return;
             }
             
@@ -234,98 +232,31 @@ class DotBoxMonitor {
         // Update status class
         serviceCard.className = `service-card ${service.status || 'unknown'}`;
         
-        // Update status text
+        // Update status text  
         const statusElement = serviceCard.querySelector('.service-status');
         if (statusElement) {
             const statusText = service.status === 'healthy' ? 'Healthy' : 
                               service.status === 'warning' ? 'Warning' :
                               service.status === 'unhealthy' ? 'Unhealthy' : 'Unknown';
             statusElement.className = `service-status ${service.status || 'unknown'}`;
-            statusElement.querySelector('span').textContent = statusText;
+            statusElement.textContent = statusText;
         }
 
-        // Update metrics
-        const uptimeElement = serviceCard.querySelector('.service-metric:first-child span:last-child');
+        // Update metrics using new layout structure
+        const uptimeElement = serviceCard.querySelector('.service-uptime');
         if (uptimeElement) {
             uptimeElement.textContent = `${service.uptime || 0}%`;
         }
 
-        const timestampElement = serviceCard.querySelector('.service-metric:last-child span:last-child');
+        const timestampElement = serviceCard.querySelector('.service-timestamp');
         if (timestampElement) {
             timestampElement.textContent = service.timestamp ? new Date(service.timestamp).toLocaleTimeString() : 'Never';
         }
 
-        // Update error message in details if expanded
-        const detailsElement = document.getElementById(`details-${serviceId}`);
-        if (detailsElement && detailsElement.classList.contains('expanded')) {
-            this.updateServiceDetails(detailsElement, service);
-            // Update chart with new data (non-destructive)
-            this.updateServiceChart(serviceId);
-        }
+        // Note: Expanded details functionality removed with new horizontal layout
     }
 
-    updateServiceDetails(detailsElement, service) {
-        // Update response time
-        const responseTimeElement = detailsElement.querySelector('.detail-item .detail-value');
-        if (responseTimeElement) {
-            responseTimeElement.textContent = `${service.responseTime || 0}ms`;
-        }
-
-        // Update last check time
-        const lastCheckElement = detailsElement.querySelector('.detail-item:nth-child(3) .detail-value');
-        if (lastCheckElement) {
-            lastCheckElement.textContent = service.timestamp ? new Date(service.timestamp).toLocaleString() : 'Never';
-        }
-
-        // Update or add error message
-        let errorElement = detailsElement.querySelector('.service-error');
-        if (service.error) {
-            if (!errorElement) {
-                errorElement = document.createElement('div');
-                errorElement.className = 'service-error';
-                detailsElement.appendChild(errorElement);
-            }
-            errorElement.innerHTML = `<strong>Error:</strong> ${service.error}`;
-        } else if (errorElement) {
-            errorElement.remove();
-        }
-    }
-
-    getExpandedServiceStates() {
-        const expandedStates = new Map();
-        
-        // Find all expanded service details
-        Object.values(this.services || {}).forEach(categoryServices => {
-            if (Array.isArray(categoryServices)) {
-                categoryServices.forEach(service => {
-                    const serviceId = service.id || service.name.toLowerCase().replace(/\s+/g, '-');
-                    const detailsElement = document.getElementById(`details-${serviceId}`);
-                    
-                    if (detailsElement && detailsElement.classList.contains('expanded')) {
-                        expandedStates.set(serviceId, true);
-                    }
-                });
-            }
-        });
-        
-        return expandedStates;
-    }
-
-    restoreExpandedServiceStates(expandedStates) {
-        // Restore expanded states after a short delay to ensure DOM is ready
-        setTimeout(() => {
-            expandedStates.forEach((isExpanded, serviceId) => {
-                if (isExpanded) {
-                    const detailsElement = document.getElementById(`details-${serviceId}`);
-                    if (detailsElement) {
-                        detailsElement.classList.add('expanded');
-                        // Update chart with new data
-                        this.updateServiceChart(serviceId);
-                    }
-                }
-            });
-        }, 100);
-    }
+    // Legacy methods removed - expanded details functionality replaced with detail pane
 
     loadDetailChart(serviceId, chartHistory) {
         const loadingEl = document.getElementById(`detail-chart-loading-${serviceId}`);
@@ -684,7 +615,6 @@ class DotBoxMonitor {
                     
                     this.updateHealthOverview();
                     this.renderHealthServices();
-                    this.showNotification('Data refreshed via API', 'success');
                 } else {
                     const overviewError = overviewRes.ok ? null : await overviewRes.text();
                     const servicesError = servicesRes.ok ? null : await servicesRes.text();
@@ -777,39 +707,29 @@ class DotBoxMonitor {
             
             return `
                 <div class="service-card ${statusClass}" data-service-id="${serviceId}">
-                    <div class="service-header">
-                        <div class="service-name">
-                            <span>${service.icon || '🔧'}</span>
-                            <span>${service.name}</span>
-                        </div>
-                        <div class="service-actions">
-                            <button class="btn-icon info" onclick="monitor.showServiceDetail('${serviceId}')" title="Show details">
-                                ℹ
-                            </button>
-                            ${service.visit_url ? `
-                                <a href="${service.visit_url}" target="_blank" class="btn-icon link" title="Open service">
-                                    🔗
-                                </a>
-                            ` : ''}
+                    <div class="service-info">
+                        <div class="service-icon">${service.icon || '🔧'}</div>
+                        <div class="service-details">
+                            <div class="service-name">${service.name}</div>
+                            <div class="service-status ${statusClass}">${statusText}</div>
                         </div>
                     </div>
                     
-                    <div class="service-content">
-                        <div class="service-status ${statusClass}">
-                            <span>${statusText}</span>
-                        </div>
-                        <div class="service-metrics">
-                            <div class="service-metric">
-                                <span>↗</span>
-                                <span>${service.uptime || 0}%</span>
-                            </div>
-                            <div class="service-metric">
-                                <span>🕒</span>
-                                <span>${service.timestamp ? new Date(service.timestamp).toLocaleTimeString() : 'Never'}</span>
-                            </div>
-                        </div>
+                    <div class="service-stats">
+                        <div class="service-uptime">${service.uptime || 0}%</div>
+                        <div class="service-timestamp">${service.timestamp ? new Date(service.timestamp).toLocaleTimeString() : 'Never'}</div>
                     </div>
-
+                    
+                    <div class="service-actions">
+                        <button class="btn-icon info" onclick="monitor.showServiceDetail('${serviceId}')" title="Show details">
+                            ℹ
+                        </button>
+                        ${service.visit_url ? `
+                            <a href="${service.visit_url}" target="_blank" class="btn-icon link" title="Open service">
+                                🔗
+                            </a>
+                        ` : ''}
+                    </div>
                 </div>
             `;
         }).join('');

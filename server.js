@@ -83,6 +83,7 @@ const requireAuth = (req, res, next) => {
 // Static files
 app.use('/static', express.static(path.join(__dirname, 'public')));
 app.use('/css', express.static(path.join(__dirname, 'public', 'css')));
+app.use('/img', express.static(path.join(__dirname, 'public', 'img')));
 app.use('/app.js', express.static(path.join(__dirname, 'public', 'app.js')));
 
 // Routes

@@ -1,0 +1,9 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+Always only use plain ECMA script/JS never TypeScript.
+Keep things separated as much as possible and SOLID principle. So if there is a CSS animation and styling for a specific part of the site, rather have a specific css-file for that. Try keeping everything in smaller components (pure HTML/JS) and following SOLID principles. Components is put in 2 categories. BaseComponents like a ModalDialog which is generic and can be reused for whatever purpose. Then specific AppComponents which could be SettingsDialog for application specific settings based on ModalDialog.
+
+Keep components separated into folders like components\base and components\app and each component should have its own js and css file if specific and not generic css/js that applies for the entire site.
