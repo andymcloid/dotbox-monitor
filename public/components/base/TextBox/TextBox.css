@@ -1,0 +1,127 @@
+/* Base TextBox Component Styles */
+.textbox-group {
+    margin-bottom: 1rem;
+}
+
+.textbox-label {
+    display: block;
+    font-weight: 500;
+    color: var(--text-primary);
+    margin-bottom: 0.5rem;
+    font-size: 0.9rem;
+}
+
+.textbox-input {
+    width: 100%;
+    padding: 0.75rem;
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    background: var(--background-light);
+    color: var(--text-primary);
+    font-size: 0.9rem;
+    font-family: inherit;
+    transition: border-color 0.3s ease, box-shadow 0.3s ease;
+}
+
+.textbox-input:focus {
+    outline: none;
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 2px rgba(34, 197, 94, 0.1);
+}
+
+.textbox-input::placeholder {
+    color: var(--text-secondary);
+}
+
+.textbox-input:disabled {
+    background-color: var(--background-disabled);
+    color: var(--text-disabled);
+    cursor: not-allowed;
+    opacity: 0.6;
+}
+
+.textbox-input:read-only {
+    background-color: var(--background-readonly);
+    cursor: default;
+}
+
+.textbox-help {
+    display: block;
+    margin-top: 0.25rem;
+    font-size: 0.75rem;
+    color: var(--text-secondary);
+    line-height: 1.4;
+}
+
+.textbox-error {
+    display: block;
+    margin-top: 0.25rem;
+    font-size: 0.75rem;
+    color: var(--accent-red);
+    line-height: 1.4;
+}
+
+.textbox-error.hidden {
+    display: none;
+}
+
+/* Error state */
+.textbox-error-state .textbox-input {
+    border-color: var(--accent-red);
+    box-shadow: 0 0 0 2px rgba(239, 68, 68, 0.1);
+}
+
+.textbox-error-state .textbox-label {
+    color: var(--accent-red);
+}
+
+/* Disabled state */
+.textbox-disabled .textbox-label {
+    color: var(--text-disabled);
+}
+
+/* Required indicator */
+.textbox-required .textbox-label::after {
+    content: ' *';
+    color: var(--accent-red);
+}
+
+/* Size variants */
+.textbox-small .textbox-input {
+    padding: 0.5rem;
+    font-size: 0.8rem;
+}
+
+.textbox-large .textbox-input {
+    padding: 1rem;
+    font-size: 1rem;
+}
+
+/* Textarea specific styles */
+.textbox-input[type="textarea"] {
+    resize: vertical;
+    min-height: 100px;
+}
+
+/* Number input styling */
+.textbox-input[type="number"] {
+    -moz-appearance: textfield;
+}
+
+.textbox-input[type="number"]::-webkit-outer-spin-button,
+.textbox-input[type="number"]::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+}
+
+/* Search input styling */
+.textbox-input[type="search"] {
+    -webkit-appearance: none;
+}
+
+.textbox-input[type="search"]::-webkit-search-decoration,
+.textbox-input[type="search"]::-webkit-search-cancel-button,
+.textbox-input[type="search"]::-webkit-search-results-button,
+.textbox-input[type="search"]::-webkit-search-results-decoration {
+    -webkit-appearance: none;
+} 

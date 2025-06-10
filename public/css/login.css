@@ -238,4 +238,16 @@ p {
 .password-hint {
   color: rgba(238, 238, 238, 0.7);
   font-size: 0.8rem;
+}
+
+/* Logo styling */
+.logo-container {
+  text-align: center;
+  margin-bottom: 2rem;
+}
+
+.login-logo {
+  width: 100%;
+  max-width: 150px;
+  height: auto;
 } 

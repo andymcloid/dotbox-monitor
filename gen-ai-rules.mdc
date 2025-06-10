@@ -1,7 +1,7 @@
 ---
 description: 
 globs: 
-alwaysApply: true
+alwaysApply: false
 ---
 # Component Architecture Rules for DotBox Monitor
 
@@ -137,5 +137,5 @@ class AppComponent extends BaseComponent {
 4. **Self-Contained**: Each component manages its own DOM, events, and lifecycle
 5. **Clean Destruction**: Always provide cleanup methods for memory management
 
-
 This architecture ensures maintainable, scalable, and reusable components while following SOLID principles.
+

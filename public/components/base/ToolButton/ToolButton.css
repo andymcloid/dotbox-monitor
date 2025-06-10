@@ -1,0 +1,157 @@
+/* Base ToolButton Component Styles */
+.tool-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    padding: 0.5rem;
+    border: none;
+    border-radius: 6px;
+    background: transparent;
+    color: var(--text-primary);
+    font-size: 1rem;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    user-select: none;
+    position: relative;
+}
+
+.tool-btn:hover:not(:disabled) {
+    background-color: var(--hover-bg);
+    color: var(--text-primary);
+}
+
+.tool-btn:active:not(:disabled) {
+    transform: translateY(1px);
+}
+
+.tool-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    pointer-events: none;
+}
+
+/* Size variants */
+.tool-btn-small {
+    padding: 0.25rem;
+    font-size: 0.875rem;
+}
+
+.tool-btn-medium {
+    padding: 0.5rem;
+    font-size: 1rem;
+}
+
+.tool-btn-large {
+    padding: 0.75rem;
+    font-size: 1.125rem;
+}
+
+/* Variant styles */
+.tool-btn-default {
+    color: var(--text-primary);
+}
+
+.tool-btn-default:hover:not(:disabled) {
+    background-color: var(--hover-bg);
+    color: var(--text-primary);
+}
+
+.tool-btn-primary {
+    color: var(--primary-color);
+}
+
+.tool-btn-primary:hover:not(:disabled) {
+    background-color: rgba(34, 197, 94, 0.1);
+    color: var(--primary-color);
+}
+
+.tool-btn-danger {
+    color: var(--accent-red);
+}
+
+.tool-btn-danger:hover:not(:disabled) {
+    background-color: rgba(239, 68, 68, 0.1);
+    color: var(--accent-red);
+}
+
+/* Active state */
+.tool-btn-active {
+    background-color: var(--primary-color);
+    color: white;
+}
+
+.tool-btn-active:hover:not(:disabled) {
+    background-color: var(--primary-dark);
+    color: white;
+}
+
+/* Text styling */
+.tool-btn-text {
+    font-size: 0.875rem;
+    font-weight: 500;
+}
+
+/* Focus styles */
+.tool-btn:focus {
+    outline: none;
+    box-shadow: 0 0 0 2px rgba(34, 197, 94, 0.2);
+}
+
+/* Navbar specific styling */
+.navbar .tool-btn {
+    border-radius: 8px;
+    padding: 0.75rem;
+    font-size: 1.125rem;
+}
+
+.navbar .tool-btn:hover:not(:disabled) {
+    background-color: rgba(255, 255, 255, 0.1);
+    transform: scale(1.05);
+}
+
+/* Tooltip enhancement */
+.tool-btn[title]:hover::after {
+    content: attr(title);
+    position: absolute;
+    bottom: -2rem;
+    left: 50%;
+    transform: translateX(-50%);
+    background: var(--background-dark);
+    color: var(--text-primary);
+    padding: 0.25rem 0.5rem;
+    border-radius: 4px;
+    font-size: 0.75rem;
+    white-space: nowrap;
+    z-index: 1000;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+    animation: tooltip-fade-in 0.2s ease;
+}
+
+@keyframes tooltip-fade-in {
+    from {
+        opacity: 0;
+        transform: translateX(-50%) translateY(-4px);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(-50%) translateY(0);
+    }
+}
+
+/* Button group */
+.tool-btn-group {
+    display: inline-flex;
+    border-radius: 6px;
+    overflow: hidden;
+    border: 1px solid var(--border-color);
+}
+
+.tool-btn-group .tool-btn {
+    border-radius: 0;
+    border-right: 1px solid var(--border-color);
+}
+
+.tool-btn-group .tool-btn:last-child {
+    border-right: none;
+} 

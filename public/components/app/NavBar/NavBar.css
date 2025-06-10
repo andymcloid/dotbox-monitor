@@ -1,0 +1,225 @@
+/* NavBar Component Styles */
+.navbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 1rem 1.5rem;
+    background: var(--background-light);
+    border-bottom: 1px solid var(--border-color);
+    min-height: 70px;
+    position: sticky;
+    top: 0;
+    z-index: 1000;
+    backdrop-filter: blur(10px);
+}
+
+.navbar-brand {
+    display: flex;
+    align-items: center;
+    flex-shrink: 0;
+}
+
+.logo {
+    display: flex;
+    align-items: center;
+    cursor: pointer;
+    transition: transform 0.2s ease;
+}
+
+.logo:hover {
+    transform: scale(1.05);
+}
+
+.logo-image {
+    height: 40px;
+    width: auto;
+    object-fit: contain;
+}
+
+.navbar-center {
+    flex: 1;
+    display: flex;
+    justify-content: center;
+    max-width: 600px;
+    margin: 0 2rem;
+}
+
+.system-status-mini {
+    display: flex;
+    gap: 2rem;
+    align-items: center;
+    background: var(--background-dark);
+    padding: 0.75rem 1.5rem;
+    border-radius: 8px;
+    border: 1px solid var(--border-color);
+}
+
+.status-mini-item {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.875rem;
+}
+
+.status-mini-label {
+    color: var(--text-secondary);
+    font-weight: 500;
+}
+
+.status-mini-value {
+    color: var(--text-primary);
+    font-weight: 600;
+}
+
+/* Status indicators */
+.status-mini-value.status-healthy {
+    color: var(--primary-color);
+}
+
+.status-mini-value.status-warning {
+    color: var(--accent-orange);
+}
+
+.status-mini-value.status-unhealthy {
+    color: var(--accent-red);
+}
+
+.connection-status {
+    font-size: 0.75rem;
+    margin-left: 0.25rem;
+    transition: all 0.3s ease;
+}
+
+.navbar-actions {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    flex-shrink: 0;
+}
+
+.navbar-btn {
+    padding: 0.75rem;
+    font-size: 1.125rem;
+    border-radius: 8px;
+    color: var(--text-primary);
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 44px;
+    height: 44px;
+}
+
+.navbar-btn:hover {
+    background: rgba(255, 255, 255, 0.1);
+    transform: scale(1.05);
+}
+
+.navbar-btn:active {
+    transform: scale(0.95);
+}
+
+/* Navbar variants */
+.navbar-sticky {
+    position: sticky;
+    top: 0;
+}
+
+.navbar-transparent {
+    background: rgba(var(--background-light-rgb), 0.9);
+    backdrop-filter: blur(20px);
+}
+
+/* Responsive design */
+@media (max-width: 1024px) {
+    .navbar-center {
+        margin: 0 1rem;
+    }
+    
+    .system-status-mini {
+        gap: 1.5rem;
+        padding: 0.5rem 1rem;
+    }
+    
+    .status-mini-item {
+        font-size: 0.8rem;
+    }
+}
+
+@media (max-width: 768px) {
+    .navbar {
+        padding: 0.75rem 1rem;
+        min-height: 60px;
+    }
+    
+    .navbar-center {
+        display: none;
+    }
+    
+    .logo-image {
+        height: 32px;
+    }
+    
+    .navbar-btn {
+        padding: 0.5rem;
+        font-size: 1rem;
+        min-width: 40px;
+        height: 40px;
+    }
+    
+    .navbar-actions {
+        gap: 0.25rem;
+    }
+}
+
+@media (max-width: 480px) {
+    .navbar {
+        padding: 0.5rem 0.75rem;
+        min-height: 56px;
+    }
+    
+    .logo-image {
+        height: 28px;
+    }
+    
+    .navbar-btn {
+        padding: 0.375rem;
+        font-size: 0.9rem;
+        min-width: 36px;
+        height: 36px;
+    }
+}
+
+/* Animation for status changes */
+.status-mini-value {
+    transition: color 0.3s ease;
+}
+
+.connection-status {
+    transition: all 0.3s ease;
+    animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+    0%, 100% {
+        opacity: 1;
+    }
+    50% {
+        opacity: 0.7;
+    }
+}
+
+/* Dark mode enhancements */
+@media (prefers-color-scheme: dark) {
+    .navbar {
+        border-bottom-color: rgba(255, 255, 255, 0.1);
+    }
+    
+    .system-status-mini {
+        background: rgba(0, 0, 0, 0.3);
+        border-color: rgba(255, 255, 255, 0.1);
+    }
+} 

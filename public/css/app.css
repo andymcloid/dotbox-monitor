@@ -207,7 +207,14 @@ body {
     color: var(--text-primary);
 }
 
-.hidden { display: none !important; }
+.hidden { 
+    display: none !important; 
+}
+
+/* Override for modals when they need to be visible */
+.modal.show {
+    display: flex !important;
+}
 
 /* Custom scrollbars */
 ::-webkit-scrollbar {
