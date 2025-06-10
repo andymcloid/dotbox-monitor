@@ -877,7 +877,7 @@ sl-select {
     border-left: 1px solid var(--border-color);
     transform: translateX(100%);
     transition: transform 0.3s ease-in-out;
-    z-index: 200;
+    z-index: 1000;
     display: flex;
     flex-direction: column;
     box-shadow: -10px 0 30px rgba(0, 0, 0, 0.3);
@@ -895,7 +895,7 @@ sl-select {
     bottom: 0;
     background: rgba(0, 0, 0, 0.5);
     backdrop-filter: blur(4px);
-    z-index: 199;
+    z-index: 999;
     opacity: 0;
     visibility: hidden;
     transition: opacity 0.3s ease-in-out, visibility 0.3s ease-in-out;

@@ -8,13 +8,17 @@ class ServiceCard {
         this.options = {
             name: 'Service',
             status: 'unknown',
+            icon: '🔧',
+            uptime: '0%',
             port: null,
             url: null,
             container: null,
+            showActions: false,
             onStart: null,
             onStop: null,
             onRestart: null,
             onDelete: null,
+            onInfo: null,
             ...options
         };
         this.element = null;
@@ -38,35 +42,76 @@ class ServiceCard {
     }
 
     render() {
+        // Use existing service card structure from app.css
         this.element.innerHTML = `
-            <div class="service-card-header">
-                <h3 class="service-card-title">${this.options.name}</h3>
-                <span class="service-card-status ${this.options.status}">${this.options.status}</span>
+            <div class="service-info">
+                <div class="service-icon">${this.options.icon || '🔧'}</div>
+                <div class="service-details">
+                    <div class="service-name">${this.options.name}</div>
+                    <div class="service-status ${this.getStatusClass()}">${this.getStatusText()}</div>
+                </div>
             </div>
-            <div class="service-card-details">
-                ${this.options.port ? `
-                    <div class="service-card-detail">
-                        <span class="service-card-detail-label">Port</span>
-                        <span class="service-card-detail-value">${this.options.port}</span>
-                    </div>
-                ` : ''}
-                ${this.options.url ? `
-                    <div class="service-card-detail">
-                        <span class="service-card-detail-label">URL</span>
-                        <span class="service-card-detail-value">
-                            <a href="${this.options.url}" target="_blank">${this.options.url}</a>
-                        </span>
-                    </div>
-                ` : ''}
+            <div class="service-stats">
+                <div class="service-uptime">${this.options.uptime || '0%'}</div>
+                <div class="service-timestamp">${this.formatTimestamp()}</div>
             </div>
-            <div class="service-card-actions">
+            <div class="service-actions">
+                ${this.options.url ? `<a href="${this.options.url}" target="_blank" class="btn-icon link" title="Open Service">🔗</a>` : ''}
+                <button class="btn-icon info" title="View Details" data-action="info">ℹ️</button>
+            </div>
+        `;
+        
+        // Add action buttons if explicitly enabled
+        if (this.options.showActions) {
+            this.element.classList.add('with-actions');
+            const actionsDiv = document.createElement('div');
+            actionsDiv.className = 'service-card-actions';
+            actionsDiv.innerHTML = `
                 <button class="service-card-action primary" data-action="start">Start</button>
                 <button class="service-card-action" data-action="restart">Restart</button>
                 <button class="service-card-action" data-action="stop">Stop</button>
                 <button class="service-card-action danger" data-action="delete">Delete</button>
-            </div>
-        `;
-        this.updateActionStates();
+            `;
+            this.element.appendChild(actionsDiv);
+        }
+        
+        this.updateStatus(this.options.status);
+    }
+
+    getStatusClass() {
+        switch (this.options.status) {
+            case 'running':
+            case 'healthy':
+                return 'healthy';
+            case 'warning':
+                return 'warning';
+            case 'stopped':
+            case 'unhealthy':
+                return 'unhealthy';
+            default:
+                return 'unknown';
+        }
+    }
+
+    getStatusText() {
+        switch (this.options.status) {
+            case 'running':
+                return 'Running';
+            case 'healthy':
+                return 'Healthy';
+            case 'warning':
+                return 'Warning';
+            case 'stopped':
+                return 'Stopped';
+            case 'unhealthy':
+                return 'Unhealthy';
+            default:
+                return 'Unknown';
+        }
+    }
+
+    formatTimestamp() {
+        return new Date().toLocaleTimeString('sv-SE', { hour: '2-digit', minute: '2-digit' });
     }
 
     bindEvents() {
@@ -101,17 +146,32 @@ class ServiceCard {
                     this.options.onDelete(this.options.name);
                 }
                 break;
+            case 'info':
+                if (this.options.onInfo) {
+                    this.options.onInfo(this.options.name);
+                }
+                break;
         }
     }
 
     updateStatus(status) {
         this.options.status = status;
-        const statusElement = this.element.querySelector('.service-card-status');
+        
+        // Update service status element
+        const statusElement = this.element.querySelector('.service-status');
         if (statusElement) {
-            statusElement.className = `service-card-status ${status}`;
-            statusElement.textContent = status;
+            statusElement.className = `service-status ${this.getStatusClass()}`;
+            statusElement.textContent = this.getStatusText();
         }
-        this.updateActionStates();
+        
+        // Update card border color
+        this.element.classList.remove('healthy', 'warning', 'unhealthy');
+        this.element.classList.add(this.getStatusClass());
+        
+        // Update action states if actions are shown
+        if (this.options.showActions) {
+            this.updateActionStates();
+        }
     }
 
     updateActionStates() {
@@ -119,14 +179,31 @@ class ServiceCard {
         const stopBtn = this.element.querySelector('[data-action="stop"]');
         const restartBtn = this.element.querySelector('[data-action="restart"]');
         
-        if (this.options.status === 'running') {
-            startBtn.disabled = true;
-            stopBtn.disabled = false;
-            restartBtn.disabled = false;
-        } else {
-            startBtn.disabled = false;
-            stopBtn.disabled = true;
-            restartBtn.disabled = true;
+        if (startBtn && stopBtn && restartBtn) {
+            if (this.options.status === 'running' || this.options.status === 'healthy') {
+                startBtn.disabled = true;
+                stopBtn.disabled = false;
+                restartBtn.disabled = false;
+            } else {
+                startBtn.disabled = false;
+                stopBtn.disabled = true;
+                restartBtn.disabled = true;
+            }
+        }
+    }
+
+    updateUptime(uptime) {
+        this.options.uptime = uptime;
+        const uptimeElement = this.element.querySelector('.service-uptime');
+        if (uptimeElement) {
+            uptimeElement.textContent = uptime;
+        }
+    }
+
+    updateTimestamp() {
+        const timestampElement = this.element.querySelector('.service-timestamp');
+        if (timestampElement) {
+            timestampElement.textContent = this.formatTimestamp();
         }
     }
 

@@ -42,6 +42,8 @@ class LoginForm {
         this.statusElement = document.createElement('div');
         this.statusElement.className = 'login-status';
         this.statusElement.style.display = 'none';
+        this.statusElement.style.opacity = '0';
+        this.statusElement.style.transition = 'opacity 0.3s ease'; // Smooth transitions
         this.statusElement.innerHTML = `
             <div class="status-text">🔐 Checking authentication...</div>
             <div class="status-spinner"></div>
@@ -53,6 +55,8 @@ class LoginForm {
         this.form.id = 'loginForm';
         this.form.method = this.options.method;
         this.form.className = 'form login';
+        this.form.style.display = 'block'; // Set explicit display to prevent jumping
+        this.form.style.transition = 'opacity 0.3s ease'; // Smooth transitions
         
         // Create password field using TextBox component
         const passwordFieldDiv = document.createElement('div');
@@ -187,13 +191,22 @@ class LoginForm {
     }
     
     setLoading(loading) {
-        // Show/hide status element during loading
+        // Use opacity instead of display to prevent layout jumping
         if (loading) {
             this.statusElement.style.display = 'block';
-            this.form.style.display = 'none';
+            this.statusElement.style.opacity = '1';
+            this.form.style.opacity = '0';
+            this.form.style.pointerEvents = 'none';
         } else {
-            this.statusElement.style.display = 'none';
-            this.form.style.display = 'block';
+            this.statusElement.style.opacity = '0';
+            this.form.style.opacity = '1';
+            this.form.style.pointerEvents = 'auto';
+            // Hide status element after transition
+            setTimeout(() => {
+                if (this.statusElement.style.opacity === '0') {
+                    this.statusElement.style.display = 'none';
+                }
+            }, 300);
         }
         
         // Also disable submit button

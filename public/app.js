@@ -1533,86 +1533,14 @@ function hideAddServiceModal() {
 
 
 async function editService(serviceId) {
-    // Find the service in our data
-    let serviceToEdit = null;
-    Object.values(window.monitor.services).forEach(categoryServices => {
-        if (Array.isArray(categoryServices)) {
-            categoryServices.forEach(service => {
-                const id = service.id || service.name.toLowerCase().replace(/\s+/g, '-');
-                if (id == serviceId) {
-                    serviceToEdit = service;
-                }
-            });
-        }
-    });
-
-    if (!serviceToEdit) {
-        window.monitor.showNotification('Service not found', 'danger');
-        return;
-    }
-
-    // Populate the form with existing data
-    document.getElementById('serviceName').value = serviceToEdit.name || '';
-    document.getElementById('serviceType').value = serviceToEdit.type || 'http';
-    
-    // Set URL or Host based on service type
-    if (serviceToEdit.type === 'tcp') {
-        document.getElementById('serviceHost').value = serviceToEdit.host || '';
-        document.getElementById('serviceUrl').value = ''; // Clear URL field for TCP
-    } else {
-        document.getElementById('serviceUrl').value = serviceToEdit.url || '';
-        document.getElementById('serviceHost').value = ''; // Clear host field for HTTP/SSL
+    // Use the AddServiceDialog component for editing
+    if (!window.addServiceDialog) {
+        // Create the dialog if it doesn't exist
+        window.addServiceDialog = new AddServiceDialog();
     }
     
-    document.getElementById('serviceVisitUrl').value = serviceToEdit.visit_url || '';
-    document.getElementById('servicePort').value = serviceToEdit.port || '';
-    document.getElementById('serviceIcon').value = serviceToEdit.icon || '🔧';
-    document.getElementById('emojiPreview').textContent = serviceToEdit.icon || '🔧';
-    document.getElementById('emojiSearch').value = ''; // Clear search field
-    document.getElementById('serviceCategory').value = serviceToEdit.category || 'web';
-    document.getElementById('serviceTimeout').value = serviceToEdit.timeout || 5;
-    document.getElementById('serviceInterval').value = serviceToEdit.interval || 30;
-    document.getElementById('warningThreshold').value = serviceToEdit.warning_threshold || getDefaultThreshold(serviceToEdit.type || 'http');
-    
-    // Handle field visibility based on service type
-    const urlGroup = document.getElementById('urlGroup');
-    const hostGroup = document.getElementById('hostGroup');
-    const portGroup = document.getElementById('portGroup');
-    const urlInput = document.getElementById('serviceUrl');
-    const hostInput = document.getElementById('serviceHost');
-    const portInput = document.getElementById('servicePort');
-    
-    // Reset required attributes
-    urlInput.required = false;
-    hostInput.required = false;
-    portInput.required = false;
-    
-    // Show/hide fields based on service type
-    switch(serviceToEdit.type) {
-        case 'tcp':
-            urlGroup.style.display = 'none';
-            hostGroup.style.display = 'block';
-            portGroup.style.display = 'block';
-            hostInput.required = true;
-            portInput.required = true;
-            break;
-        default: // http, ssl
-            urlGroup.style.display = 'block';
-            hostGroup.style.display = 'none';
-            portGroup.style.display = 'none';
-            urlInput.required = true;
-            break;
-    }
-
-    // Change modal title and button text
-    document.querySelector('#addServiceModal .modal-header h3').textContent = '✏️ Edit Service';
-    document.querySelector('button[type="submit"][form="addServiceForm"]').textContent = 'Update Service';
-    
-    // Store the service ID for update
-    document.getElementById('addServiceForm').dataset.editingId = serviceId;
-    
-    // Show the modal
-    showAddServiceModal();
+    // Use the component's showForEdit method
+    window.addServiceDialog.showForEdit(serviceId);
 }
 
 async function deleteService(serviceId) {

@@ -276,6 +276,72 @@ class AddServiceDialog extends ModalDialog {
             console.log(`${type.toUpperCase()}: ${message}`);
         }
     }
+
+    async showForEdit(serviceId) {
+        // Find the service in our data
+        let serviceToEdit = null;
+        if (window.monitor && window.monitor.services) {
+            Object.values(window.monitor.services).forEach(categoryServices => {
+                if (Array.isArray(categoryServices)) {
+                    categoryServices.forEach(service => {
+                        const id = service.id || service.name.toLowerCase().replace(/\s+/g, '-');
+                        if (id == serviceId) {
+                            serviceToEdit = service;
+                        }
+                    });
+                }
+            });
+        }
+
+        if (!serviceToEdit) {
+            this.showNotification('Service not found', 'danger');
+            return;
+        }
+
+        // Set editing mode
+        this.isEditing = true;
+        this.editingId = serviceId;
+        this.setTitle('✏️ Edit Service');
+        this.footer.querySelector('.action-btn.save').textContent = 'Update Service';
+
+        // Show the dialog first
+        this.show();
+
+        // Populate the form with existing data
+        this.form.querySelector('#serviceName').value = serviceToEdit.name || '';
+        this.form.querySelector('#serviceType').value = serviceToEdit.type || 'http';
+        
+        // Set URL or Host based on service type
+        if (serviceToEdit.type === 'tcp') {
+            this.form.querySelector('#serviceHost').value = serviceToEdit.host || '';
+            this.form.querySelector('#serviceUrl').value = ''; // Clear URL field for TCP
+        } else {
+            this.form.querySelector('#serviceUrl').value = serviceToEdit.url || '';
+            this.form.querySelector('#serviceHost').value = ''; // Clear host field for HTTP/SSL
+        }
+        
+        this.form.querySelector('#serviceVisitUrl').value = serviceToEdit.visit_url || '';
+        this.form.querySelector('#servicePort').value = serviceToEdit.port || '';
+        this.form.querySelector('#serviceIcon').value = serviceToEdit.icon || '🔧';
+        this.form.querySelector('#emojiPreview').textContent = serviceToEdit.icon || '🔧';
+        this.form.querySelector('#emojiSearch').value = ''; // Clear search field
+        this.form.querySelector('#serviceCategory').value = serviceToEdit.category || 'web';
+        this.form.querySelector('#serviceTimeout').value = serviceToEdit.timeout || 5;
+        this.form.querySelector('#serviceInterval').value = serviceToEdit.interval || 30;
+        this.form.querySelector('#warningThreshold').value = serviceToEdit.warning_threshold || this.getDefaultThreshold(serviceToEdit.type || 'http');
+        
+        // Update field visibility based on service type
+        this.handleServiceTypeChange();
+    }
+
+    getDefaultThreshold(serviceType) {
+        switch(serviceType) {
+            case 'ssl': return 30;
+            case 'http': return 1000;
+            case 'tcp': return 500;
+            default: return 1000;
+        }
+    }
 }
 
 // Global instance

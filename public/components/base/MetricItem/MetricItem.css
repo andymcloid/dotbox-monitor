@@ -1,42 +1,56 @@
-/* Base MetricItem Component Styles */
+/* Base MetricItem Component Styles - Matches app.css design system */
 .metric-item {
     display: flex;
     flex-direction: column;
-    padding: 16px;
-    margin: 8px 0;
-    border: 1px solid #e0e0e0;
+    padding: 1rem;
+    background: var(--bg-tertiary);
     border-radius: 8px;
-    background: #fff;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    border: 1px solid var(--border-color);
+    transition: all 0.2s ease;
+}
+
+.metric-item:hover {
+    border-color: var(--accent-blue);
 }
 
 .metric-item-label {
-    font-size: 14px;
-    color: #666;
-    margin-bottom: 4px;
-    font-weight: 500;
+    color: var(--text-muted);
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    font-weight: 600;
+    margin-bottom: 0.5rem;
 }
 
 .metric-item-value {
-    font-size: 24px;
-    font-weight: bold;
-    color: #333;
+    color: var(--text-primary);
+    font-size: 1.5rem;
+    font-weight: 700;
+    font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+    display: flex;
+    align-items: baseline;
+    gap: 0.25rem;
 }
 
 .metric-item-unit {
-    font-size: 12px;
-    color: #888;
-    margin-left: 4px;
+    font-size: 0.875rem;
+    color: var(--text-secondary);
+    font-weight: 500;
 }
 
+/* Status color variants using existing color scheme */
 .metric-item.warning .metric-item-value {
-    color: #f39c12;
+    color: var(--accent-orange);
 }
 
 .metric-item.error .metric-item-value {
-    color: #e74c3c;
+    color: var(--accent-red);
 }
 
 .metric-item.success .metric-item-value {
-    color: #27ae60;
+    color: var(--accent-green);
+}
+
+.metric-item.info .metric-item-value {
+    color: var(--accent-blue);
 } 
