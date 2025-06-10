@@ -296,8 +296,74 @@ const broadcastHealthUpdate = () => {
   }
 };
 
-// Broadcast health updates every 60 seconds
+// Broadcast health updates every 60 seconds to avoid too frequent updates
 setInterval(broadcastHealthUpdate, 60000);
+
+// History API endpoints
+app.get('/api/services/:id/history', requireAuth, async (req, res) => {
+  try {
+    const { hours = 24, limit = 100 } = req.query;
+    const history = await healthCheck.getServiceHistory(req.params.id, parseInt(hours), parseInt(limit));
+    res.json(history);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+app.get('/api/history', requireAuth, async (req, res) => {
+  try {
+    const { hours = 24, limit = 1000 } = req.query;
+    const history = await healthCheck.getAllServicesHistory(parseInt(hours), parseInt(limit));
+    res.json(history);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Settings API endpoints
+app.get('/api/settings', requireAuth, async (req, res) => {
+  try {
+    const settings = await database.getAllSettings();
+    res.json(settings);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+app.get('/api/settings/:key', requireAuth, async (req, res) => {
+  try {
+    const value = await database.getSetting(req.params.key);
+    if (value === null) {
+      return res.status(404).json({ error: 'Setting not found' });
+    }
+    res.json({ key: req.params.key, value });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+app.put('/api/settings/:key', requireAuth, async (req, res) => {
+  try {
+    const { value, description } = req.body;
+    if (!value) {
+      return res.status(400).json({ error: 'Value is required' });
+    }
+    const result = await database.setSetting(req.params.key, value, description);
+    res.json({ success: true, ...result });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Manual cleanup endpoint
+app.post('/api/history/cleanup', requireAuth, async (req, res) => {
+  try {
+    await database.cleanupOldHistory();
+    res.json({ success: true, message: 'History cleanup completed' });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
 
 // Add debug endpoint
 app.get('/api/debug', requireAuth, async (req, res) => {
@@ -306,12 +372,14 @@ app.get('/api/debug', requireAuth, async (req, res) => {
     const healthOverview = healthCheck ? healthCheck.getOverallHealth() : null;
     const healthCategories = healthCheck ? healthCheck.getServicesByCategory() : null;
     const allStatus = healthCheck ? healthCheck.getAllStatus() : null;
+    const settings = await database.getAllSettings();
     
     res.json({
       database_services: services,
       health_overview: healthOverview,
       health_categories: healthCategories,
       all_status: allStatus,
+      settings: settings,
       services_count: services.length
     });
   } catch (error) {
