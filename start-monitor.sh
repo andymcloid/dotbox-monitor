@@ -33,7 +33,7 @@ export ADMIN_PASSWORD=${ADMIN_PASSWORD:-admin123}
 # Start the application with PM2 (if installed) or node directly
 if command -v pm2 &> /dev/null; then
     echo "Starting with PM2..."
-    pm2 start server.js --name "dotbox-monitor" --log logs/app.log --error logs/error.log --out logs/out.log
+    pm2 start server.js --name "dotbox-monitor" --log logs/app.log --error logs/error.log
     pm2 save
 else
     echo "Starting with Node.js directly..."

@@ -37,11 +37,37 @@
 
         // Simple hash function for password storage
         async function hashPassword(password) {
-            const encoder = new TextEncoder();
-            const data = encoder.encode(password + 'dotbox_salt_2024');
-            const hashBuffer = await crypto.subtle.digest('SHA-256', data);
-            const hashArray = Array.from(new Uint8Array(hashBuffer));
-            return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+            // Check if we're in a secure context (HTTPS or localhost)
+            if (window.isSecureContext && crypto.subtle) {
+                try {
+                    const encoder = new TextEncoder();
+                    const data = encoder.encode(password + 'dotbox_salt_2024');
+                    const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+                    const hashArray = Array.from(new Uint8Array(hashBuffer));
+                    return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+                } catch (error) {
+                    console.warn('Web Crypto API failed, falling back to simple hash');
+                }
+            }
+            
+            // Fallback for non-secure contexts (HTTP)
+            return simpleHash(password + 'dotbox_salt_2024');
+        }
+
+        // Simple hash fallback for HTTP environments
+        function simpleHash(str) {
+            let hash = 0;
+            if (str.length === 0) return hash.toString(16);
+            
+            for (let i = 0; i < str.length; i++) {
+                const char = str.charCodeAt(i);
+                hash = ((hash << 5) - hash) + char;
+                hash = hash & hash; // Convert to 32-bit integer
+            }
+            
+            // Convert to hex and pad to ensure consistent length
+            return Math.abs(hash).toString(16).padStart(8, '0') + 
+                   Math.abs(hash * 31).toString(16).padStart(8, '0');
         }
 
         // Check session with server

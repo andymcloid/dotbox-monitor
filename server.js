@@ -29,6 +29,30 @@ function hashPassword(password) {
   return crypto.createHash('sha256').update(password + 'dotbox_salt_2024').digest('hex');
 }
 
+// Simple hash fallback (matches client-side fallback for HTTP)
+function simpleHash(str) {
+  let hash = 0;
+  if (str.length === 0) return hash.toString(16);
+  
+  for (let i = 0; i < str.length; i++) {
+    const char = str.charCodeAt(i);
+    hash = ((hash << 5) - hash) + char;
+    hash = hash & hash; // Convert to 32-bit integer
+  }
+  
+  // Convert to hex and pad to ensure consistent length
+  return Math.abs(hash).toString(16).padStart(8, '0') + 
+         Math.abs(hash * 31).toString(16).padStart(8, '0');
+}
+
+// Validate auth token (supports both hash types)
+function validateAuthToken(token, password) {
+  const webCryptoHash = hashPassword(password);
+  const simpleHashValue = simpleHash(password + 'dotbox_salt_2024');
+  
+  return token === webCryptoHash || token === simpleHashValue;
+}
+
 // Initialize database and health monitoring
 const database = new Database();
 let healthCheck;
@@ -54,7 +78,9 @@ database.init().then(async () => {
 
 // Middleware
 app.use(helmet({
-  contentSecurityPolicy: false // Allow inline scripts for Shoelace
+  contentSecurityPolicy: false, // Allow inline scripts for Shoelace
+  crossOriginOpenerPolicy: false, // Disable for HTTP deployment
+  originAgentCluster: false // Disable for HTTP deployment
 }));
 app.use(compression());
 app.use(cors());
@@ -118,10 +144,8 @@ app.post('/api/auto-login', async (req, res) => {
     return res.status(401).json({ message: 'No auth token provided' });
   }
   
-  // Verify the token matches our hashed password
-  const expectedHash = hashPassword(ADMIN_PASSWORD);
-  
-  if (authToken === expectedHash) {
+  // Verify the token matches our hashed password (supports both hash types)
+  if (validateAuthToken(authToken, ADMIN_PASSWORD)) {
     req.session.authenticated = true;
     res.json({ success: true });
   } else {
