@@ -289,10 +289,36 @@ io.on('connection', (socket) => {
 });
 
 // Broadcast health updates to all connected clients
-const broadcastHealthUpdate = () => {
+const broadcastHealthUpdate = async () => {
   if (healthCheck) {
-    io.emit('health-overview', healthCheck.getOverallHealth());
-    io.emit('health-services', healthCheck.getServicesByCategory());
+    const healthOverview = healthCheck.getOverallHealth();
+    const servicesData = healthCheck.getServicesByCategory();
+    
+    // Enhance services data with chart history (last 24h, 50 points)
+    const enhancedServicesData = {};
+    for (const [category, services] of Object.entries(servicesData)) {
+      enhancedServicesData[category] = await Promise.all(
+        services.map(async (service) => {
+          try {
+            const serviceId = service.id || service.name.toLowerCase().replace(/\s+/g, '-');
+            const history = await healthCheck.getServiceHistory(serviceId, 24, 50);
+            return {
+              ...service,
+              chartHistory: history
+            };
+          } catch (error) {
+            console.warn(`Failed to get history for service ${service.name}:`, error);
+            return {
+              ...service,
+              chartHistory: []
+            };
+          }
+        })
+      );
+    }
+    
+    io.emit('health-overview', healthOverview);
+    io.emit('health-services', enhancedServicesData);
   }
 };
 
