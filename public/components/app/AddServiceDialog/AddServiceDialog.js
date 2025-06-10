@@ -181,140 +181,65 @@ class AddServiceDialog extends ModalDialog {
         }
     }
 
-        async filterEmojis(searchTerm) {
+        filterEmojis(searchTerm) {
         const emojiDropdown = this.form.querySelector('#emojiDropdown');
         if (!emojiDropdown) return;
         
-        // Debounce API calls to avoid rate limiting
+        // Debounce searches to improve performance
         if (this.emojiSearchTimeout) {
             clearTimeout(this.emojiSearchTimeout);
         }
         
-        this.emojiSearchTimeout = setTimeout(async () => {
+        this.emojiSearchTimeout = setTimeout(() => {
+            // Wait for emoji database to load if not ready
+            if (!window.emojiDatabase) {
+                emojiDropdown.innerHTML = '<div class="emoji-no-results">Loading emojis...</div>';
+                return;
+            }
+            
             try {
                 let emojis = [];
                 
                 if (searchTerm.trim() === '') {
-                    // Load popular/default emojis when no search term
-                    if (this.emojiCache.length === 0) {
-                        // Load from API and cache common categories with delays to avoid rate limiting
-                        const categories = ['objects', 'symbols', 'travel-places'];
-                        for (const [index, category] of categories.entries()) {
-                            // Add delay between requests to avoid rate limiting
-                            if (index > 0) await new Promise(resolve => setTimeout(resolve, 300));
-                            
-                            try {
-                                const response = await fetch(`https://emoji-api.com/categories/${category}?access_key=d5d786602c5d9b1497bbd87a2a8e2beeacea2d1e`);
-                                if (response.ok) {
-                                    const categoryEmojis = await response.json();
-                                    this.emojiCache.push(...categoryEmojis);
-                                } else if (response.status === 429) {
-                                    console.log('Rate limited, using fallback');
-                                    break; // Exit loop if rate limited
-                                }
-                            } catch (err) {
-                                console.log(`Failed to load category ${category}:`, err);
-                            }
-                        }
-                    }
+                    // Show popular service-related emojis when no search term
+                    const popularPatterns = [
+                        'house', 'home', 'globe', 'computer', 'laptop', 'desktop', 'mobile', 'phone',
+                        'wrench', 'gear', 'tool', 'lock', 'key', 'security', 'shield', 'chart', 
+                        'graph', 'bar', 'server', 'database', 'cloud', 'rocket', 'lightning',
+                        'satellite', 'antenna', 'television', 'monitor', 'disk', 'package',
+                        'clipboard', 'file', 'cabinet', 'link', 'chain', 'magnifying', 'search'
+                    ];
                     
-                    // Show popular service-related emojis from cache
-                    const popularPatterns = ['house', 'globe', 'computer', 'laptop', 'wrench', 'gear', 'lock', 'chart', 'server', 'database', 'shield', 'key', 'lightning', 'rocket'];
-                    emojis = this.emojiCache.filter(emoji => 
+                    emojis = window.emojiDatabase.filter(emoji => 
                         popularPatterns.some(pattern => 
-                            emoji.unicodeName && emoji.unicodeName.toLowerCase().includes(pattern)
+                            emoji.name && emoji.name.toLowerCase().includes(pattern)
                         )
-                    ).slice(0, 15);
-                    
-                    // Fallback to hardcoded if API fails or cache is empty
-                    if (emojis.length === 0) {
-                        emojis = [
-                            { character: '🏠', unicodeName: 'house' },
-                            { character: '🌐', unicodeName: 'globe with meridians' },
-                            { character: '🔧', unicodeName: 'wrench' },
-                            { character: '💻', unicodeName: 'laptop computer' },
-                            { character: '⚙️', unicodeName: 'gear' },
-                            { character: '🔐', unicodeName: 'closed lock with key' },
-                            { character: '📊', unicodeName: 'bar chart' },
-                            { character: '📺', unicodeName: 'television' },
-                            { character: '☁️', unicodeName: 'cloud' },
-                            { character: '🚀', unicodeName: 'rocket' },
-                            { character: '🛡️', unicodeName: 'shield' },
-                            { character: '🔑', unicodeName: 'key' },
-                            { character: '⚡', unicodeName: 'lightning' },
-                            { character: '🖥️', unicodeName: 'desktop computer' },
-                            { character: '📱', unicodeName: 'mobile phone' }
-                        ];
-                    }
+                    ).slice(0, 20); // Show top 20 popular emojis
                 } else {
-                    // Search via API with retry logic
-                    try {
-                        const response = await fetch(`https://emoji-api.com/emojis?search=${encodeURIComponent(searchTerm)}&access_key=d5d786602c5d9b1497bbd87a2a8e2beeacea2d1e`);
-                        
-                        if (response.ok) {
-                            const searchResults = await response.json();
-                            if (Array.isArray(searchResults)) {
-                                emojis = searchResults.slice(0, 20); // More results for search
-                            }
-                        } else if (response.status === 429) {
-                            console.log('Rate limited, using cache fallback');
-                            // Fallback search in cache
-                            emojis = this.emojiCache.filter(emoji => 
-                                emoji.unicodeName && emoji.unicodeName.toLowerCase().includes(searchTerm.toLowerCase())
-                            ).slice(0, 15);
-                        }
-                    } catch (apiError) {
-                        console.log('API search failed, using cache fallback:', apiError);
-                        // Fallback search in cache
-                        emojis = this.emojiCache.filter(emoji => 
-                            emoji.unicodeName && emoji.unicodeName.toLowerCase().includes(searchTerm.toLowerCase())
-                        ).slice(0, 15);
-                    }
+                    // Search in the loaded emoji database
+                    const searchLower = searchTerm.toLowerCase();
+                    emojis = window.emojiDatabase.filter(emoji => 
+                        (emoji.name && emoji.name.toLowerCase().includes(searchLower)) ||
+                        (emoji.category && emoji.category.toLowerCase().includes(searchLower)) ||
+                        (emoji.subcategory && emoji.subcategory.toLowerCase().includes(searchLower))
+                    ).slice(0, 30); // Show more results for search
                 }
                 
                 if (emojis.length === 0) {
                     emojiDropdown.innerHTML = '<div class="emoji-no-results">No emojis found</div>';
                 } else {
                     emojiDropdown.innerHTML = emojis.map(emoji => {
-                        // Handle both API format and fallback format
-                        const char = emoji.character || emoji.emoji;
-                        const name = emoji.unicodeName || emoji.name || 'emoji';
+                        const char = emoji.emoji;
+                        const name = emoji.name || 'emoji';
                         const displayName = name.split(' ')[0];
                         return `<div class="emoji-option" onclick="selectEmoji('${char}')">${char} ${displayName}</div>`;
                     }).join('');
                 }
             } catch (error) {
                 console.error('Emoji search error:', error);
-                // Show comprehensive fallback emojis on total failure
-                const fallbackEmojis = [
-                    { char: '🏠', name: 'house' },
-                    { char: '🌐', name: 'globe' },
-                    { char: '🔧', name: 'wrench' },
-                    { char: '💻', name: 'laptop' },
-                    { char: '⚙️', name: 'gear' },
-                    { char: '🔐', name: 'lock' },
-                    { char: '📊', name: 'chart' },
-                    { char: '📺', name: 'tv' },
-                    { char: '☁️', name: 'cloud' },
-                    { char: '🚀', name: 'rocket' },
-                    { char: '🛡️', name: 'shield' },
-                    { char: '🔑', name: 'key' },
-                    { char: '⚡', name: 'lightning' },
-                    { char: '🖥️', name: 'desktop' },
-                    { char: '📱', name: 'mobile' }
-                ];
-                
-                const filtered = searchTerm.trim() === '' 
-                    ? fallbackEmojis 
-                    : fallbackEmojis.filter(emoji => 
-                        emoji.name.toLowerCase().includes(searchTerm.toLowerCase())
-                      );
-                
-                emojiDropdown.innerHTML = filtered.map(emoji => 
-                    `<div class="emoji-option" onclick="selectEmoji('${emoji.char}')">${emoji.char} ${emoji.name}</div>`
-                ).join('');
+                emojiDropdown.innerHTML = '<div class="emoji-no-results">Error loading emojis</div>';
             }
-        }, 300); // 300ms debounce
+        }, 150); // 150ms debounce for faster response
     }
     
     handleServiceTypeChange() {

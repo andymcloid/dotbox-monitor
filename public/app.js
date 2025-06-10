@@ -66,6 +66,65 @@ class DotBoxMonitor {
         }
     }
 
+    async loadEmojiDatabase() {
+        // Only load if not already loaded
+        if (window.emojiDatabase) return;
+        
+        try {
+            console.log('Loading emoji database...');
+            const response = await fetch('https://raw.githubusercontent.com/chalda-pnuzig/emojis.json/refs/heads/master/dist/list.min.json');
+            
+            if (response.ok) {
+                const data = await response.json();
+                window.emojiDatabase = data.emojis || [];
+                console.log(`✅ Loaded ${window.emojiDatabase.length} emojis from database`);
+            } else {
+                console.warn('Failed to load emoji database, using fallback');
+                this.createFallbackEmojiDatabase();
+            }
+        } catch (error) {
+            console.error('Error loading emoji database:', error);
+            this.createFallbackEmojiDatabase();
+        }
+    }
+
+    createFallbackEmojiDatabase() {
+        // Fallback emoji list for when the remote database fails
+        window.emojiDatabase = [
+            { emoji: '🏠', name: 'house', category: 'Objects' },
+            { emoji: '🌐', name: 'globe with meridians', category: 'Objects' },
+            { emoji: '🔧', name: 'wrench', category: 'Objects' },
+            { emoji: '💻', name: 'laptop computer', category: 'Objects' },
+            { emoji: '🖥️', name: 'desktop computer', category: 'Objects' },
+            { emoji: '📱', name: 'mobile phone', category: 'Objects' },
+            { emoji: '⚙️', name: 'gear', category: 'Objects' },
+            { emoji: '🔐', name: 'closed lock with key', category: 'Objects' },
+            { emoji: '🔒', name: 'locked', category: 'Objects' },
+            { emoji: '🔑', name: 'key', category: 'Objects' },
+            { emoji: '📊', name: 'bar chart', category: 'Objects' },
+            { emoji: '📈', name: 'chart increasing', category: 'Objects' },
+            { emoji: '📉', name: 'chart decreasing', category: 'Objects' },
+            { emoji: '📺', name: 'television', category: 'Objects' },
+            { emoji: '☁️', name: 'cloud', category: 'Travel & Places' },
+            { emoji: '🚀', name: 'rocket', category: 'Travel & Places' },
+            { emoji: '🛡️', name: 'shield', category: 'Objects' },
+            { emoji: '⚡', name: 'high voltage', category: 'Travel & Places' },
+            { emoji: '🗄️', name: 'file cabinet', category: 'Objects' },
+            { emoji: '💾', name: 'floppy disk', category: 'Objects' },
+            { emoji: '🔗', name: 'link', category: 'Objects' },
+            { emoji: '📡', name: 'satellite antenna', category: 'Objects' },
+            { emoji: '🌍', name: 'globe showing Europe-Africa', category: 'Travel & Places' },
+            { emoji: '🎯', name: 'direct hit', category: 'Activities' },
+            { emoji: '🔍', name: 'magnifying glass tilted left', category: 'Objects' },
+            { emoji: '📋', name: 'clipboard', category: 'Objects' },
+            { emoji: '📦', name: 'package', category: 'Objects' },
+            { emoji: '🎵', name: 'musical note', category: 'Objects' },
+            { emoji: '📧', name: 'e-mail', category: 'Objects' },
+            { emoji: '⭐', name: 'star', category: 'Travel & Places' }
+        ];
+        console.log(`⚠️ Using fallback emoji database with ${window.emojiDatabase.length} emojis`);
+    }
+
     async login() {
         const password = document.getElementById('passwordInput').value;
         
