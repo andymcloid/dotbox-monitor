@@ -6,6 +6,7 @@
     --bg-primary: #2c3338;
     --bg-secondary: #3b4148;
     --bg-tertiary: #363b41;
+    --background-light: #363b41;
     --text-primary: #eee;
     --text-secondary: #ccc;
     --text-muted: #606468;
@@ -325,8 +326,6 @@ sl-select {
 .service-card.unhealthy {
     border-color: var(--accent-red);
 }
-
-
 
 .service-info {
     display: flex;
@@ -864,6 +863,11 @@ sl-select {
 @keyframes slideIn {
     from { transform: translateX(100%); opacity: 0; }
     to { transform: translateX(0); opacity: 1; }
+}
+
+@keyframes spin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
 }
 
 /* Detail Sliding Pane */

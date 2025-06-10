@@ -12,6 +12,7 @@ class AddServiceDialog extends ModalDialog {
         this.form = null;
         this.isEditing = false;
         this.editingId = null;
+        this.emojiSearchTimeout = null; // For debouncing searches
         
         this.initialize();
     }
@@ -150,6 +151,170 @@ class AddServiceDialog extends ModalDialog {
         const serviceTypeSelect = this.form.querySelector('#serviceType');
         serviceTypeSelect.addEventListener('change', () => this.handleServiceTypeChange());
         this.handleServiceTypeChange();
+        
+        // Add emoji search functionality
+        this.bindEmojiEvents();
+    }
+
+    bindEmojiEvents() {
+        const emojiSearch = this.form.querySelector('#emojiSearch');
+        const emojiDropdown = this.form.querySelector('#emojiDropdown');
+        
+        if (emojiSearch && emojiDropdown) {
+            // Show dropdown on focus
+            emojiSearch.addEventListener('focus', () => {
+                emojiDropdown.classList.remove('hidden');
+                this.filterEmojis('');
+            });
+            
+            // Hide dropdown when clicking outside
+            document.addEventListener('click', (e) => {
+                if (!e.target.closest('.emoji-search-wrapper')) {
+                    emojiDropdown.classList.add('hidden');
+                }
+            });
+            
+            // Filter emojis on input
+            emojiSearch.addEventListener('input', (e) => {
+                this.filterEmojis(e.target.value);
+            });
+        }
+    }
+
+        async filterEmojis(searchTerm) {
+        const emojiDropdown = this.form.querySelector('#emojiDropdown');
+        if (!emojiDropdown) return;
+        
+        // Debounce API calls to avoid rate limiting
+        if (this.emojiSearchTimeout) {
+            clearTimeout(this.emojiSearchTimeout);
+        }
+        
+        this.emojiSearchTimeout = setTimeout(async () => {
+            try {
+                let emojis = [];
+                
+                if (searchTerm.trim() === '') {
+                    // Load popular/default emojis when no search term
+                    if (this.emojiCache.length === 0) {
+                        // Load from API and cache common categories with delays to avoid rate limiting
+                        const categories = ['objects', 'symbols', 'travel-places'];
+                        for (const [index, category] of categories.entries()) {
+                            // Add delay between requests to avoid rate limiting
+                            if (index > 0) await new Promise(resolve => setTimeout(resolve, 300));
+                            
+                            try {
+                                const response = await fetch(`https://emoji-api.com/categories/${category}?access_key=d5d786602c5d9b1497bbd87a2a8e2beeacea2d1e`);
+                                if (response.ok) {
+                                    const categoryEmojis = await response.json();
+                                    this.emojiCache.push(...categoryEmojis);
+                                } else if (response.status === 429) {
+                                    console.log('Rate limited, using fallback');
+                                    break; // Exit loop if rate limited
+                                }
+                            } catch (err) {
+                                console.log(`Failed to load category ${category}:`, err);
+                            }
+                        }
+                    }
+                    
+                    // Show popular service-related emojis from cache
+                    const popularPatterns = ['house', 'globe', 'computer', 'laptop', 'wrench', 'gear', 'lock', 'chart', 'server', 'database', 'shield', 'key', 'lightning', 'rocket'];
+                    emojis = this.emojiCache.filter(emoji => 
+                        popularPatterns.some(pattern => 
+                            emoji.unicodeName && emoji.unicodeName.toLowerCase().includes(pattern)
+                        )
+                    ).slice(0, 15);
+                    
+                    // Fallback to hardcoded if API fails or cache is empty
+                    if (emojis.length === 0) {
+                        emojis = [
+                            { character: '🏠', unicodeName: 'house' },
+                            { character: '🌐', unicodeName: 'globe with meridians' },
+                            { character: '🔧', unicodeName: 'wrench' },
+                            { character: '💻', unicodeName: 'laptop computer' },
+                            { character: '⚙️', unicodeName: 'gear' },
+                            { character: '🔐', unicodeName: 'closed lock with key' },
+                            { character: '📊', unicodeName: 'bar chart' },
+                            { character: '📺', unicodeName: 'television' },
+                            { character: '☁️', unicodeName: 'cloud' },
+                            { character: '🚀', unicodeName: 'rocket' },
+                            { character: '🛡️', unicodeName: 'shield' },
+                            { character: '🔑', unicodeName: 'key' },
+                            { character: '⚡', unicodeName: 'lightning' },
+                            { character: '🖥️', unicodeName: 'desktop computer' },
+                            { character: '📱', unicodeName: 'mobile phone' }
+                        ];
+                    }
+                } else {
+                    // Search via API with retry logic
+                    try {
+                        const response = await fetch(`https://emoji-api.com/emojis?search=${encodeURIComponent(searchTerm)}&access_key=d5d786602c5d9b1497bbd87a2a8e2beeacea2d1e`);
+                        
+                        if (response.ok) {
+                            const searchResults = await response.json();
+                            if (Array.isArray(searchResults)) {
+                                emojis = searchResults.slice(0, 20); // More results for search
+                            }
+                        } else if (response.status === 429) {
+                            console.log('Rate limited, using cache fallback');
+                            // Fallback search in cache
+                            emojis = this.emojiCache.filter(emoji => 
+                                emoji.unicodeName && emoji.unicodeName.toLowerCase().includes(searchTerm.toLowerCase())
+                            ).slice(0, 15);
+                        }
+                    } catch (apiError) {
+                        console.log('API search failed, using cache fallback:', apiError);
+                        // Fallback search in cache
+                        emojis = this.emojiCache.filter(emoji => 
+                            emoji.unicodeName && emoji.unicodeName.toLowerCase().includes(searchTerm.toLowerCase())
+                        ).slice(0, 15);
+                    }
+                }
+                
+                if (emojis.length === 0) {
+                    emojiDropdown.innerHTML = '<div class="emoji-no-results">No emojis found</div>';
+                } else {
+                    emojiDropdown.innerHTML = emojis.map(emoji => {
+                        // Handle both API format and fallback format
+                        const char = emoji.character || emoji.emoji;
+                        const name = emoji.unicodeName || emoji.name || 'emoji';
+                        const displayName = name.split(' ')[0];
+                        return `<div class="emoji-option" onclick="selectEmoji('${char}')">${char} ${displayName}</div>`;
+                    }).join('');
+                }
+            } catch (error) {
+                console.error('Emoji search error:', error);
+                // Show comprehensive fallback emojis on total failure
+                const fallbackEmojis = [
+                    { char: '🏠', name: 'house' },
+                    { char: '🌐', name: 'globe' },
+                    { char: '🔧', name: 'wrench' },
+                    { char: '💻', name: 'laptop' },
+                    { char: '⚙️', name: 'gear' },
+                    { char: '🔐', name: 'lock' },
+                    { char: '📊', name: 'chart' },
+                    { char: '📺', name: 'tv' },
+                    { char: '☁️', name: 'cloud' },
+                    { char: '🚀', name: 'rocket' },
+                    { char: '🛡️', name: 'shield' },
+                    { char: '🔑', name: 'key' },
+                    { char: '⚡', name: 'lightning' },
+                    { char: '🖥️', name: 'desktop' },
+                    { char: '📱', name: 'mobile' }
+                ];
+                
+                const filtered = searchTerm.trim() === '' 
+                    ? fallbackEmojis 
+                    : fallbackEmojis.filter(emoji => 
+                        emoji.name.toLowerCase().includes(searchTerm.toLowerCase())
+                      );
+                
+                emojiDropdown.innerHTML = filtered.map(emoji => 
+                    `<div class="emoji-option" onclick="selectEmoji('${emoji.char}')">${emoji.char} ${emoji.name}</div>`
+                ).join('');
+            }
+        }, 300); // 300ms debounce
     }
     
     handleServiceTypeChange() {
@@ -193,8 +358,16 @@ class AddServiceDialog extends ModalDialog {
     }
     
     show() {
+        // Always reset form when showing for normal "add" mode
         this.resetForm();
         super.show();
+        return this;
+    }
+
+    close() {
+        // Reset edit mode when closing
+        this.resetForm();
+        super.close();
         return this;
     }
     
@@ -208,6 +381,17 @@ class AddServiceDialog extends ModalDialog {
         this.form.querySelector('#emojiPreview').textContent = '🔧';
         this.form.querySelector('#serviceIcon').value = '🔧';
         this.form.querySelector('#warningThreshold').value = '1000';
+        
+        // Reset emoji search
+        const emojiSearch = this.form.querySelector('#emojiSearch');
+        const emojiDropdown = this.form.querySelector('#emojiDropdown');
+        if (emojiSearch) {
+            emojiSearch.value = '';
+        }
+        if (emojiDropdown) {
+            emojiDropdown.classList.add('hidden');
+        }
+        
         this.handleServiceTypeChange();
     }
     
@@ -253,7 +437,10 @@ class AddServiceDialog extends ModalDialog {
                 this.showNotification(`Service "${serviceData.name}" ${action} successfully!`, 'success');
                 
                 if (window.monitor) {
-                    window.monitor.refreshHealth();
+                    // Small delay to ensure server has processed the update
+                    setTimeout(() => {
+                        window.monitor.refreshHealth();
+                    }, 200);
                 }
             } else {
                 const error = await response.json();
@@ -298,14 +485,16 @@ class AddServiceDialog extends ModalDialog {
             return;
         }
 
-        // Set editing mode
+        // Set editing mode BEFORE showing
         this.isEditing = true;
         this.editingId = serviceId;
+
+        // Show the dialog directly without resetting form
+        super.show();
+
+        // Set edit mode UI after showing
         this.setTitle('✏️ Edit Service');
         this.footer.querySelector('.action-btn.save').textContent = 'Update Service';
-
-        // Show the dialog first
-        this.show();
 
         // Populate the form with existing data
         this.form.querySelector('#serviceName').value = serviceToEdit.name || '';
@@ -367,12 +556,16 @@ function selectEmoji(emoji) {
     const emojiPreview = document.querySelector('#emojiPreview');
     const serviceIcon = document.querySelector('#serviceIcon');
     const emojiDropdown = document.querySelector('#emojiDropdown');
+    const emojiSearch = document.querySelector('#emojiSearch');
     
     if (emojiPreview && serviceIcon) {
         serviceIcon.value = emoji;
         emojiPreview.textContent = emoji;
         if (emojiDropdown) {
             emojiDropdown.classList.add('hidden');
+        }
+        if (emojiSearch) {
+            emojiSearch.value = ''; // Clear search after selection
         }
     }
 }

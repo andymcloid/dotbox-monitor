@@ -1,3 +1,6 @@
+// Global emoji database - loaded at startup
+window.emojiDatabase = null;
+
 class DotBoxMonitor {
     constructor() {
         this.socket = null;
@@ -12,6 +15,7 @@ class DotBoxMonitor {
 
     init() {
         this.bindEvents();
+        this.loadEmojiDatabase(); // Load emojis at startup
         this.checkAuth();
     }
 
@@ -131,6 +135,8 @@ class DotBoxMonitor {
                 connectionStatus.textContent = '🟢';
                 connectionStatus.title = 'WebSocket Connected - Real-time updates';
             }
+            // Update navbar connection status if available
+            this.updateNavBarConnectionStatus(true);
         });
 
         this.socket.on('disconnect', () => {
@@ -139,6 +145,8 @@ class DotBoxMonitor {
                 connectionStatus.textContent = '🔴';
                 connectionStatus.title = 'WebSocket Disconnected - Using manual refresh';
             }
+            // Update navbar connection status if available
+            this.updateNavBarConnectionStatus(false);
         });
 
         this.socket.on('health-overview', (data) => {
@@ -162,7 +170,7 @@ class DotBoxMonitor {
                 // Show that we got real-time data
                 const lastUpdatedEl = document.getElementById('lastUpdatedText');
                 if (lastUpdatedEl) {
-                    lastUpdatedEl.textContent = new Date().toLocaleTimeString() + ' 📡';
+                    lastUpdatedEl.textContent = new Date().toLocaleTimeString();
                 }
                 
                 this.updateTimeout = null;
@@ -194,6 +202,24 @@ class DotBoxMonitor {
             // Fallback to full render
             this.services = newServicesData;
             this.renderHealthServices();
+        }
+    }
+
+    updateNavBarConnectionStatus(connected) {
+        // Update navbar if it exists (global appNavBar)
+        if (window.appNavBar) {
+            window.appNavBar.updateStatus({
+                connectionStatus: connected ? 'connected' : 'disconnected'
+            });
+        }
+        
+        // Also update direct connectionStatus element for backward compatibility
+        const connectionStatus = document.getElementById('connectionStatus');
+        if (connectionStatus) {
+            connectionStatus.textContent = connected ? '🟢' : '🔴';
+            connectionStatus.title = connected 
+                ? 'WebSocket Connected - Real-time updates' 
+                : 'WebSocket Disconnected - Using manual refresh';
         }
     }
 
@@ -231,6 +257,18 @@ class DotBoxMonitor {
 
         // Update status class
         serviceCard.className = `service-card ${service.status || 'unknown'}`;
+        
+        // Update service name
+        const nameElement = serviceCard.querySelector('.service-name');
+        if (nameElement) {
+            nameElement.textContent = service.name;
+        }
+        
+        // Update service icon
+        const iconElement = serviceCard.querySelector('.service-icon');
+        if (iconElement) {
+            iconElement.textContent = service.icon || '🔧';
+        }
         
         // Update status text  
         const statusElement = serviceCard.querySelector('.service-status');
@@ -596,12 +634,21 @@ class DotBoxMonitor {
             if (!this.socket) {
                 this.socket = io();
                 this.setupSocketEvents();
+                
+                // Set initial connection status after a short delay
+                setTimeout(() => {
+                    if (this.socket && this.socket.connected) {
+                        this.updateNavBarConnectionStatus(true);
+                    } else {
+                        this.updateNavBarConnectionStatus(false);
+                    }
+                }, 100);
             }
             
             // Request fresh health data via WebSocket (preferred)
             if (this.socket && this.socket.connected) {
                 this.socket.emit('request-health-update');
-                this.showNotification('Requesting fresh data...', 'info');
+                // Removed annoying "Requesting fresh data..." notification
             } else {
                 // Fallback to HTTP if WebSocket not connected
                 const [overviewRes, servicesRes] = await Promise.all([
@@ -661,7 +708,7 @@ class DotBoxMonitor {
                 : `${healthy}/${total}`;
         }
 
-        if (lastUpdatedText && !lastUpdatedText.textContent.includes('📡')) {
+        if (lastUpdatedText) {
             lastUpdatedText.textContent = new Date().toLocaleTimeString();
         }
     }
@@ -1165,7 +1212,7 @@ function closeDetailPane() {
     detailPane.removeAttribute('data-service-id');
 }
 
-function refreshDetailChart(serviceId) {
+async function refreshDetailChart(serviceId) {
     if (window.monitor) {
         // Get serviceId from detail pane if not provided
         if (!serviceId) {
@@ -1174,8 +1221,31 @@ function refreshDetailChart(serviceId) {
         }
         
         if (serviceId) {
-            // Fetch fresh data and re-render both charts
-            window.monitor.fetchAndRenderDetailCharts(serviceId);
+            // Add loading state to refresh button
+            const refreshBtn = document.getElementById('detailRefreshBtn');
+            if (refreshBtn) {
+                const originalText = refreshBtn.innerHTML;
+                refreshBtn.innerHTML = '<span style="animation: spin 1s linear infinite;">🔄</span>';
+                refreshBtn.disabled = true;
+                refreshBtn.style.opacity = '0.6';
+                refreshBtn.style.cursor = 'not-allowed';
+                
+                try {
+                    // Fetch fresh data and re-render both charts
+                    await window.monitor.fetchAndRenderDetailCharts(serviceId);
+                } finally {
+                    // Restore button state
+                    setTimeout(() => {
+                        refreshBtn.innerHTML = originalText;
+                        refreshBtn.disabled = false;
+                        refreshBtn.style.opacity = '1';
+                        refreshBtn.style.cursor = 'pointer';
+                    }, 500); // Small delay to show completion
+                }
+            } else {
+                // Fallback if button not found
+                await window.monitor.fetchAndRenderDetailCharts(serviceId);
+            }
         }
     }
 }

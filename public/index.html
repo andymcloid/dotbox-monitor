@@ -53,13 +53,13 @@
             <h3 id="detailPaneTitle">Service Details</h3>
             <div class="detail-pane-actions">
                 <button class="detail-pane-btn refresh" id="detailRefreshBtn" onclick="refreshDetailChart(null)" title="Refresh Charts">
-                    🔄 Refresh
+                    🔄
                 </button>
                 <button class="detail-pane-btn edit" id="detailEditBtn" onclick="editServiceFromDetail()" title="Edit Service">
-                    ✏️ Edit
+                    ✏️
                 </button>
                 <button class="detail-pane-btn delete" id="detailDeleteBtn" onclick="deleteServiceFromDetail()" title="Delete Service">
-                    🗑️ Delete
+                    🗑️
                 </button>
                 <button class="detail-pane-close" onclick="closeDetailPane()">✕</button>
             </div>
@@ -143,14 +143,30 @@
         };
 
         // Add Service Modal Functions - Now handled by AddServiceDialog component
-        // Functions are defined in AddServiceDialog.js for backward compatibility
+        // Backup functions defined here to ensure navbar works
+        window.showAddServiceModal = function() {
+            console.log('showAddServiceModal called from backup function');
+            if (window.addServiceDialog) {
+                window.addServiceDialog.show();
+            } else if (typeof AddServiceDialog !== 'undefined') {
+                window.addServiceDialog = new AddServiceDialog();
+                window.addServiceDialog.show();
+            } else {
+                console.error('AddServiceDialog not available');
+            }
+        };
 
-
-
-
-
-        // Settings Modal - Now handled by SettingsDialog component
-        // Functions are defined in SettingsDialog.js for backward compatibility
+        window.showSettingsModal = function() {
+            console.log('showSettingsModal called from backup function');
+            if (window.settingsDialog) {
+                window.settingsDialog.show();
+            } else if (typeof SettingsDialog !== 'undefined') {
+                window.settingsDialog = new SettingsDialog();
+                window.settingsDialog.show();
+            } else {
+                console.error('SettingsDialog not available');
+            }
+        };
 
         // Legacy functions - no longer used with sliding pane
         // function toggleServiceDetails(serviceId) { /* moved to sliding pane */ }
@@ -163,12 +179,15 @@
         document.addEventListener('DOMContentLoaded', () => {
             startSessionChecks();
             
-            // Initialize NavBar component
-            initializeNavBar();
+            // Initialize NavBar component after a delay to ensure all components are loaded
+            setTimeout(() => {
+                initializeNavBar();
+            }, 300);
         });
         
         // Initialize NavBar component
         function initializeNavBar() {
+            console.log('Initializing NavBar...');
             appNavBar = new NavBar({
                 logoSrc: '/img/logo.svg',
                 logoAlt: 'DotBox Monitor',
@@ -176,17 +195,23 @@
                 showStatus: true
             });
             
-            // Add navbar buttons
+            // Add navbar buttons - simplified
             appNavBar.addButton('settings', {
                 icon: '⚙️',
                 tooltip: 'Settings',
-                onClick: () => showSettingsModal()
+                onClick: () => {
+                    console.log('Settings button clicked');
+                    showSettingsModal();
+                }
             });
             
             appNavBar.addButton('addService', {
                 icon: '➕',
                 tooltip: 'Add Service',
-                onClick: () => showAddServiceModal()
+                onClick: () => {
+                    console.log('Add Service button clicked');
+                    showAddServiceModal();
+                }
             });
             
             appNavBar.addButton('logout', {
@@ -198,6 +223,7 @@
             // Add to container
             const container = document.getElementById('navbarContainer');
             container.appendChild(appNavBar.getElement());
+            console.log('NavBar initialized successfully');
             
             // Update status periodically if window.monitor exists
             if (window.monitor) {
@@ -207,6 +233,14 @@
                     originalUpdateStatus.call(this, data);
                     updateNavBarStatus(data);
                 };
+                
+                // Update initial connection status if socket exists
+                if (window.monitor.socket) {
+                    const connected = window.monitor.socket.connected;
+                    appNavBar.updateStatus({
+                        connectionStatus: connected ? 'connected' : 'disconnected'
+                    });
+                }
             }
         }
         
