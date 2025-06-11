@@ -395,7 +395,7 @@ class DotBoxMonitor {
 
     async fetchAndRenderDetailCharts(serviceId) {
         try {
-            const response = await fetch(`/api/services/${serviceId}/history?hours=24&limit=50`);
+            const response = await fetch(`/api/services/${serviceId}/history?hours=24`);
             if (!response.ok) {
                 throw new Error('Failed to fetch chart data');
             }
@@ -1393,8 +1393,8 @@ async function loadServiceChart(serviceId) {
         loadingEl.textContent = 'Loading chart data...';
         loadingEl.style.display = 'block';
         
-        // Fetch service history from API (fewer points for cleaner chart)
-        const response = await fetch(`/api/services/${serviceId}/history?hours=24&limit=50`);
+        // Fetch service history from API (full 24h data)
+        const response = await fetch(`/api/services/${serviceId}/history?hours=24`);
         if (!response.ok) {
             throw new Error('Failed to fetch chart data');
         }
