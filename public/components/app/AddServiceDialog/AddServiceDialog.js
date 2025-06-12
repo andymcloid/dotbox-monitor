@@ -282,11 +282,9 @@ class AddServiceDialog extends ModalDialog {
         }
     }
     
-    show() {
-        // Always reset form when showing for normal "add" mode
-        this.resetForm();
+    async show() {
+        await this.populateCategoryDropdown();
         super.show();
-        return this;
     }
 
     close() {
@@ -390,6 +388,7 @@ class AddServiceDialog extends ModalDialog {
     }
 
     async showForEdit(serviceId) {
+        await this.populateCategoryDropdown();
         // Find the service in our data
         let serviceToEdit = null;
         if (window.monitor && window.monitor.services) {
@@ -439,7 +438,7 @@ class AddServiceDialog extends ModalDialog {
         this.form.querySelector('#serviceIcon').value = serviceToEdit.icon || '🔧';
         this.form.querySelector('#emojiPreview').textContent = serviceToEdit.icon || '🔧';
         this.form.querySelector('#emojiSearch').value = ''; // Clear search field
-        this.form.querySelector('#serviceCategory').value = serviceToEdit.category || 'web';
+        this.form.querySelector('#serviceCategory').value = serviceToEdit.category || '';
         this.form.querySelector('#serviceTimeout').value = serviceToEdit.timeout || 5;
         this.form.querySelector('#serviceInterval').value = serviceToEdit.interval || 30;
         this.form.querySelector('#warningThreshold').value = serviceToEdit.warning_threshold || this.getDefaultThreshold(serviceToEdit.type || 'http');
@@ -454,6 +453,29 @@ class AddServiceDialog extends ModalDialog {
             case 'http': return 1000;
             case 'tcp': return 500;
             default: return 1000;
+        }
+    }
+
+    async populateCategoryDropdown() {
+        const select = this.form.querySelector('#serviceCategory');
+        if (!select) return;
+        try {
+            const response = await fetch('/api/categories');
+            let categories = [];
+            if (response.ok) {
+                categories = await response.json();
+            }
+            select.innerHTML = '';
+            if (categories.length === 0) {
+                select.innerHTML = '<option value="">Other</option>';
+            } else {
+                categories.forEach(cat => {
+                    select.innerHTML += `<option value="${cat.name}">${cat.name}</option>`;
+                });
+                select.innerHTML += '<option value="">Other</option>';
+            }
+        } catch (e) {
+            select.innerHTML = '<option value="">Other</option>';
         }
     }
 }

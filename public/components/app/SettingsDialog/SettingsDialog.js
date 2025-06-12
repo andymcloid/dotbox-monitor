@@ -176,67 +176,40 @@ class SettingsDialog extends ModalDialog {
     
     renderCategories() {
         const container = this.modal.querySelector('#categoriesContainer');
-        
         const categoriesHtml = `
             <div class="categories-header">
                 <h4>Manage Service Categories</h4>
-                <button type="button" class="btn-add-category" onclick="settingsDialog.showCategoryForm()">
+                <button type="button" class="btn-add-category" id="addCategoryBtn">
                     <span>➕</span> Add Category
                 </button>
             </div>
-            
             <div class="category-form-container" id="categoryFormContainer" style="display: none;">
                 <form id="categoryForm" class="category-form">
-                    <div class="form-row">
-                        <div class="form-group">
-                            <label>Category Name</label>
-                            <input type="text" name="name" required>
-                        </div>
-                        <div class="form-group">
-                            <label>Icon</label>
-                            <input type="text" name="icon" placeholder="📁" maxlength="2">
-                        </div>
-                    </div>
                     <div class="form-group">
-                        <label>Description</label>
-                        <input type="text" name="description" placeholder="Optional description">
-                    </div>
-                    <div class="form-group">
-                        <label>Color</label>
-                        <input type="color" name="color" value="#6366f1">
+                        <label>Category Name</label>
+                        <input type="text" name="name" required>
                     </div>
                     <div class="category-form-actions">
-                        <button type="button" onclick="settingsDialog.hideCategoryForm()">Cancel</button>
+                        <button type="button" id="cancelCategoryBtn">Cancel</button>
                         <button type="submit">Save Category</button>
                     </div>
                 </form>
             </div>
-            
             <div class="categories-list">
                 ${this.categories.map(category => `
                     <div class="category-item" data-id="${category.id}">
-                        <div class="category-info">
-                            <span class="category-icon" style="background-color: ${category.color}">${category.icon}</span>
-                            <div class="category-details">
-                                <div class="category-name">${category.name}</div>
-                                <div class="category-description">${category.description || 'No description'}</div>
-                            </div>
-                        </div>
+                        <div class="category-name">${category.name}</div>
                         <div class="category-actions">
-                            <button type="button" class="btn-icon edit" onclick="settingsDialog.editCategory(${category.id})" title="Edit">
-                                ✏️
-                            </button>
-                            <button type="button" class="btn-icon delete" onclick="settingsDialog.deleteCategory(${category.id})" title="Delete">
-                                🗑️
-                            </button>
+                            <button type="button" class="btn-icon edit" data-action="edit" title="Edit">✏️</button>
+                            <button type="button" class="btn-icon delete" data-action="delete" title="Delete">🗑️</button>
                         </div>
                     </div>
                 `).join('')}
             </div>
         `;
-        
         container.innerHTML = categoriesHtml;
         this.bindCategoryFormEvents();
+        this.bindCategoryListEvents();
     }
     
     bindCategoryFormEvents() {
@@ -244,13 +217,32 @@ class SettingsDialog extends ModalDialog {
         if (form) {
             form.addEventListener('submit', (e) => this.handleCategorySubmit(e));
         }
+        const addBtn = this.modal.querySelector('#addCategoryBtn');
+        if (addBtn) {
+            addBtn.addEventListener('click', () => this.showCategoryForm());
+        }
+        const cancelBtn = this.modal.querySelector('#cancelCategoryBtn');
+        if (cancelBtn) {
+            cancelBtn.addEventListener('click', () => this.hideCategoryForm());
+        }
+    }
+    
+    bindCategoryListEvents() {
+        const list = this.modal.querySelector('.categories-list');
+        if (!list) return;
+        list.querySelectorAll('.category-item').forEach(item => {
+            const id = item.getAttribute('data-id');
+            const editBtn = item.querySelector('.btn-icon.edit');
+            const deleteBtn = item.querySelector('.btn-icon.delete');
+            if (editBtn) editBtn.addEventListener('click', () => this.editCategory(id));
+            if (deleteBtn) deleteBtn.addEventListener('click', () => this.deleteCategory(id));
+        });
     }
     
     showCategoryForm() {
         this.editingCategory = null;
         const container = this.modal.querySelector('#categoryFormContainer');
         const form = this.modal.querySelector('#categoryForm');
-        
         form.reset();
         form.name.focus();
         container.style.display = 'block';
@@ -264,19 +256,12 @@ class SettingsDialog extends ModalDialog {
     }
     
     async editCategory(id) {
-        const category = this.categories.find(c => c.id === id);
+        const category = this.categories.find(c => c.id == id);
         if (!category) return;
-        
         this.editingCategory = category;
         const container = this.modal.querySelector('#categoryFormContainer');
         const form = this.modal.querySelector('#categoryForm');
-        
-        // Populate form
         form.name.value = category.name;
-        form.icon.value = category.icon;
-        form.description.value = category.description || '';
-        form.color.value = category.color;
-        
         container.style.display = 'block';
         container.scrollIntoView({ behavior: 'smooth' });
         form.name.focus();
@@ -284,15 +269,8 @@ class SettingsDialog extends ModalDialog {
     
     async handleCategorySubmit(e) {
         e.preventDefault();
-        
         const formData = new FormData(e.target);
-        const categoryData = {
-            name: formData.get('name'),
-            description: formData.get('description'),
-            icon: formData.get('icon') || '📁',
-            color: formData.get('color')
-        };
-        
+        const categoryData = { name: formData.get('name') };
         try {
             let response;
             if (this.editingCategory) {
@@ -308,11 +286,10 @@ class SettingsDialog extends ModalDialog {
                     body: JSON.stringify(categoryData)
                 });
             }
-            
             if (response.ok) {
                 this.showNotification(`Category ${this.editingCategory ? 'updated' : 'created'} successfully!`, 'success');
                 this.hideCategoryForm();
-                this.loadCategories(); // Reload list
+                this.loadCategories();
             } else {
                 const error = await response.json();
                 this.showNotification(`Failed to save category: ${error.error}`, 'danger');
@@ -323,21 +300,14 @@ class SettingsDialog extends ModalDialog {
     }
     
     async deleteCategory(id) {
-        const category = this.categories.find(c => c.id === id);
+        const category = this.categories.find(c => c.id == id);
         if (!category) return;
-        
-        if (!confirm(`Are you sure you want to delete "${category.name}"?`)) {
-            return;
-        }
-        
+        if (!confirm(`Are you sure you want to delete "${category.name}"?`)) return;
         try {
-            const response = await fetch(`/api/categories/${id}`, {
-                method: 'DELETE'
-            });
-            
+            const response = await fetch(`/api/categories/${id}`, { method: 'DELETE' });
             if (response.ok) {
                 this.showNotification('Category deleted successfully!', 'success');
-                this.loadCategories(); // Reload list
+                this.loadCategories();
             } else {
                 const error = await response.json();
                 this.showNotification(`Failed to delete category: ${error.error}`, 'danger');
