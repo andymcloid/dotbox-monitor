@@ -141,6 +141,10 @@ class ModalDialog {
             this.onOpen();
         }
         
+        // Emit custom event after modal is shown
+        const event = new CustomEvent('dialogShown', { bubbles: false });
+        this.element.dispatchEvent(event);
+        
         return this;
     }
     
@@ -206,6 +210,31 @@ class ModalDialog {
     
     onDestroyCallback(callback) {
         this.onDestroy = callback;
+        return this;
+    }
+    
+    setPadding(padding) {
+        if (this.body) {
+            this.body.style.padding = (typeof padding === 'number') ? `${padding}px` : padding;
+        }
+        return this;
+    }
+    
+    /**
+     * setBodyContainerMode(true) disables modal body padding and scrolling, for full-size child components (e.g. TabView)
+     * setBodyContainerMode(false) restores default modal body padding and scrolling
+     */
+    setBodyContainerMode(isContainer = true) {
+        if (!this.body) return this;
+        if (isContainer) {
+            this.body.style.padding = '0';
+            this.body.style.maxHeight = 'none';
+            // Do NOT set overflow here; let TabView handle it
+        } else {
+            this.body.style.padding = '';
+            this.body.style.maxHeight = '';
+            // Do NOT set overflow here; let default CSS handle it
+        }
         return this;
     }
 }

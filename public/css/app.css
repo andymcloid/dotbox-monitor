@@ -129,7 +129,7 @@ body {
 .status-mini-value {
     color: var(--text-primary);
     font-weight: 600;
-    font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+    font-family: inherit;
     min-width: fit-content;
     text-align: right;
 }
@@ -380,13 +380,13 @@ sl-select {
     font-weight: 600;
     font-size: 1rem;
     color: var(--text-primary);
-    font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+    font-family: inherit;
 }
 
 .service-timestamp {
     font-size: 0.75rem;
     color: var(--text-secondary);
-    font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+    font-family: inherit;
 }
 
 .service-actions {
@@ -1093,4 +1093,18 @@ canvas[id^="status-chart-"] {
     .detail-pane.open {
         transform: translateX(0);
     }
+}
+
+.settings-tabs-bar {
+    position: sticky;
+    top: 0;
+    z-index: 2;
+    background: var(--bg-primary);
+    border-bottom: 1px solid var(--border-color);
+}
+
+.value {
+    font-family: 'JetBrains Mono', 'Fira Mono', 'Menlo', 'Consolas', monospace;
+    font-variant-numeric: tabular-nums;
+    letter-spacing: 0.01em;
 } 

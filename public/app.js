@@ -335,7 +335,7 @@ class DotBoxMonitor {
             const statusText = service.status === 'healthy' ? 'Healthy' : 
                               service.status === 'warning' ? 'Warning' :
                               service.status === 'unhealthy' ? 'Unhealthy' : 'Unknown';
-            statusElement.className = `service-status ${service.status || 'unknown'}`;
+            statusElement.className = `service-status value ${service.status || 'unknown'}`;
             statusElement.textContent = statusText;
         }
 
@@ -817,13 +817,13 @@ class DotBoxMonitor {
                         <div class="service-icon">${service.icon || '🔧'}</div>
                         <div class="service-details">
                             <div class="service-name">${service.name}</div>
-                            <div class="service-status ${statusClass}">${statusText}</div>
+                            <div class="service-status value ${statusClass}">${statusText}</div>
                         </div>
                     </div>
                     
                     <div class="service-stats">
-                        <div class="service-uptime">${service.uptime || 0}%</div>
-                        <div class="service-timestamp">${service.timestamp ? new Date(service.timestamp).toLocaleTimeString() : 'Never'}</div>
+                        <div class="service-uptime value">${service.uptime || 0}%</div>
+                        <div class="service-timestamp value">${service.timestamp ? new Date(service.timestamp).toLocaleTimeString() : 'Never'}</div>
                     </div>
                     
                     <div class="service-actions">
@@ -1120,41 +1120,41 @@ class DotBoxMonitor {
             <div class="detail-metrics-grid">
                 <div class="detail-metric-item">
                     <div class="detail-metric-label">Response Time</div>
-                    <div class="detail-metric-value">${service.responseTime || 0}ms</div>
+                    <div class="detail-metric-value value">${service.responseTime || 0}ms</div>
                 </div>
                 <div class="detail-metric-item">
                     <div class="detail-metric-label">Uptime</div>
-                    <div class="detail-metric-value">${service.uptime || 0}%</div>
+                    <div class="detail-metric-value value">${service.uptime || 0}%</div>
                 </div>
                 <div class="detail-metric-item">
                     <div class="detail-metric-label">Type</div>
-                    <div class="detail-metric-value">${service.type?.toUpperCase() || 'UNKNOWN'}</div>
+                    <div class="detail-metric-value value">${service.type?.toUpperCase() || 'UNKNOWN'}</div>
                 </div>
                 <div class="detail-metric-item">
                     <div class="detail-metric-label">Category</div>
-                    <div class="detail-metric-value">${service.category || 'Other'}</div>
+                    <div class="detail-metric-value value">${service.category || 'Other'}</div>
                 </div>
                 <div class="detail-metric-item">
                     <div class="detail-metric-label">Last Check</div>
-                    <div class="detail-metric-value">${service.timestamp ? new Date(service.timestamp).toLocaleString() : 'Never'}</div>
+                    <div class="detail-metric-value value">${service.timestamp ? new Date(service.timestamp).toLocaleString() : 'Never'}</div>
                 </div>
                 <div class="detail-metric-item">
                     <div class="detail-metric-label">Warning Threshold</div>
-                    <div class="detail-metric-value">${service.warning_threshold || 'N/A'}${service.type === 'ssl' ? ' days' : 'ms'}</div>
+                    <div class="detail-metric-value value">${service.warning_threshold || 'N/A'}${service.type === 'ssl' ? ' days' : 'ms'}</div>
                 </div>
             </div>
 
             ${service.url ? `
                 <div class="detail-metric-item">
                     <div class="detail-metric-label">URL</div>
-                    <div class="detail-metric-value" style="font-family: monospace; font-size: 0.8em; word-break: break-all;">${service.url}</div>
+                    <div class="detail-metric-value value" style="font-size: 0.8em; word-break: break-all;">${service.url}</div>
                 </div>
             ` : ''}
 
             ${service.visit_url ? `
                 <div class="detail-metric-item">
                     <div class="detail-metric-label">Visit URL</div>
-                    <div class="detail-metric-value">
+                    <div class="detail-metric-value value">
                         <a href="${service.visit_url}" target="_blank" style="color: var(--accent-blue); text-decoration: none;">
                             ${service.visit_url} 🔗
                         </a>
@@ -1165,28 +1165,28 @@ class DotBoxMonitor {
             ${service.type === 'ssl' && service.daysUntilExpiry !== undefined ? `
                 <div class="detail-metric-item">
                     <div class="detail-metric-label">Days Until Expiry</div>
-                    <div class="detail-metric-value">${service.daysUntilExpiry} days</div>
+                    <div class="detail-metric-value value">${service.daysUntilExpiry} days</div>
                 </div>
             ` : ''}
 
             ${service.type === 'ssl' && service.issuer ? `
                 <div class="detail-metric-item">
                     <div class="detail-metric-label">Certificate Issuer</div>
-                    <div class="detail-metric-value">${service.issuer}</div>
+                    <div class="detail-metric-value value">${service.issuer}</div>
                 </div>
             ` : ''}
 
             ${service.type === 'ssl' && service.validTo ? `
                 <div class="detail-metric-item">
                     <div class="detail-metric-label">Valid Until</div>
-                    <div class="detail-metric-value">${new Date(service.validTo).toLocaleDateString()}</div>
+                    <div class="detail-metric-value value">${new Date(service.validTo).toLocaleDateString()}</div>
                 </div>
             ` : ''}
 
             ${service.error ? `
                 <div class="detail-metric-item" style="grid-column: 1/-1;">
                     <div class="detail-metric-label">Error</div>
-                    <div class="detail-metric-value" style="color: var(--accent-red);">${service.error}</div>
+                    <div class="detail-metric-value value" style="color: var(--accent-red);">${service.error}</div>
                 </div>
             ` : ''}
         `;
@@ -1658,8 +1658,6 @@ function hideAddServiceModal() {
         }
     }
 }
-
-
 
 async function editService(serviceId) {
     // Use the AddServiceDialog component for editing

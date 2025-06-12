@@ -284,6 +284,61 @@ app.delete('/api/services/:id', requireAuth, async (req, res) => {
   }
 });
 
+// Categories CRUD operations
+app.get('/api/categories', requireAuth, async (req, res) => {
+  try {
+    const categories = await database.getAllCategories();
+    res.json(categories);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+app.get('/api/categories/:id', requireAuth, async (req, res) => {
+  try {
+    const category = await database.getCategory(req.params.id);
+    if (!category) {
+      return res.status(404).json({ error: 'Category not found' });
+    }
+    res.json(category);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+app.post('/api/categories', requireAuth, async (req, res) => {
+  try {
+    const result = await database.createCategory(req.body);
+    res.json(result);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+app.put('/api/categories/:id', requireAuth, async (req, res) => {
+  try {
+    const result = await database.updateCategory(req.params.id, req.body);
+    if (result.changes === 0) {
+      return res.status(404).json({ error: 'Category not found' });
+    }
+    res.json(result);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+app.delete('/api/categories/:id', requireAuth, async (req, res) => {
+  try {
+    const result = await database.deleteCategory(req.params.id);
+    if (result.changes === 0) {
+      return res.status(404).json({ error: 'Category not found' });
+    }
+    res.json(result);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
 // Serve main application
 app.get('/', (req, res) => {
   if (req.session.authenticated) {

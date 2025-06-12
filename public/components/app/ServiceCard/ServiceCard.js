@@ -48,12 +48,12 @@ class ServiceCard {
                 <div class="service-icon">${this.options.icon || '🔧'}</div>
                 <div class="service-details">
                     <div class="service-name">${this.options.name}</div>
-                    <div class="service-status ${this.getStatusClass()}">${this.getStatusText()}</div>
+                    <div class="service-status value ${this.getStatusClass()}">${this.getStatusText()}</div>
                 </div>
             </div>
             <div class="service-stats">
-                <div class="service-uptime">${this.options.uptime || '0%'}</div>
-                <div class="service-timestamp">${this.formatTimestamp()}</div>
+                <div class="service-uptime value">${this.options.uptime || '0%'}</div>
+                <div class="service-timestamp value">${this.formatTimestamp()}</div>
             </div>
             <div class="service-actions">
                 ${this.options.url ? `<a href="${this.options.url}" target="_blank" class="btn-icon link" title="Open Service">🔗</a>` : ''}
@@ -197,6 +197,7 @@ class ServiceCard {
         const uptimeElement = this.element.querySelector('.service-uptime');
         if (uptimeElement) {
             uptimeElement.textContent = uptime;
+            uptimeElement.classList.add('value');
         }
     }
 

@@ -56,15 +56,15 @@ class NavBar {
             this.statusElement.innerHTML = `
                 <div class="status-mini-item">
                     <span class="status-mini-label">Health:</span>
-                    <span class="status-mini-value" id="overallHealthText">Loading...</span>
+                    <span class="status-mini-value value" id="overallHealthText">Loading...</span>
                 </div>
                 <div class="status-mini-item">
                     <span class="status-mini-label">Services:</span>
-                    <span class="status-mini-value" id="servicesCountText">0/0</span>
+                    <span class="status-mini-value value" id="servicesCountText">0/0</span>
                 </div>
                 <div class="status-mini-item">
                     <span class="status-mini-label">Updated:</span>
-                    <span class="status-mini-value" id="lastUpdatedText">Never</span>
+                    <span class="status-mini-value value" id="lastUpdatedText">Never</span>
                     <span class="connection-status" id="connectionStatus" title="WebSocket Connection">🔴</span>
                 </div>
             `;
@@ -134,7 +134,7 @@ class NavBar {
             const healthElement = this.statusElement.querySelector('#overallHealthText');
             if (healthElement) {
                 healthElement.textContent = status.health;
-                healthElement.className = `status-mini-value status-${status.health.toLowerCase()}`;
+                healthElement.className = `status-mini-value value status-${status.health.toLowerCase()}`;
             }
         }
         

@@ -36,7 +36,7 @@ class MetricItem {
     render() {
         this.element.innerHTML = `
             <div class="metric-item-label">${this.options.label}</div>
-            <div class="metric-item-value">
+            <div class="metric-item-value value">
                 ${this.options.value}
                 <span class="metric-item-unit">${this.options.unit}</span>
             </div>
@@ -52,6 +52,7 @@ class MetricItem {
                 ${value}
                 <span class="metric-item-unit">${this.options.unit}</span>
             `;
+            valueElement.classList.add('value');
         }
         this.updateStatus();
     }
