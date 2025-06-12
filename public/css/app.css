@@ -1062,7 +1062,6 @@ sl-select {
 .detail-chart-container {
     position: relative;
     width: 100%;
-    height: 250px;
     overflow: hidden;
 }
 

@@ -330,31 +330,9 @@ const broadcastHealthUpdate = async () => {
     const healthOverview = healthCheck.getOverallHealth();
     const servicesData = healthCheck.getServicesByCategory();
     
-    // Enhance services data with chart history (last 24h, 50 points)
-    const enhancedServicesData = {};
-    for (const [category, services] of Object.entries(servicesData)) {
-      enhancedServicesData[category] = await Promise.all(
-        services.map(async (service) => {
-          try {
-            const serviceId = service.id || service.name.toLowerCase().replace(/\s+/g, '-');
-            const history = await healthCheck.getServiceHistory(serviceId, 24, 50);
-            return {
-              ...service,
-              chartHistory: history
-            };
-          } catch (error) {
-            console.warn(`Failed to get history for service ${service.name}:`, error);
-            return {
-              ...service,
-              chartHistory: []
-            };
-          }
-        })
-      );
-    }
-    
+    // Send live status updates only (no chart history - that's fetched via API when needed)
     io.emit('health-overview', healthOverview);
-    io.emit('health-services', enhancedServicesData);
+    io.emit('health-services', servicesData);
   }
 };
 
@@ -364,9 +342,19 @@ setInterval(broadcastHealthUpdate, 30 * 1000);
 // History API endpoints
 app.get('/api/services/:id/history', requireAuth, async (req, res) => {
   try {
-    const { hours = 24, limit = 100 } = req.query;
-    const history = await healthCheck.getServiceHistory(req.params.id, parseInt(hours), parseInt(limit));
+    const { hours = 24, limit } = req.query;
+    const history = await healthCheck.getServiceHistory(req.params.id, parseInt(hours), limit ? parseInt(limit) : null);
     res.json(history);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+app.get('/api/services/:id/graphdata', requireAuth, async (req, res) => {
+  try {
+    const { hours = 24, maxPoints = 100 } = req.query;
+    const graphData = await healthCheck.getServiceGraphData(req.params.id, parseInt(hours), parseInt(maxPoints));
+    res.json(graphData);
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
