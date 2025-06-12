@@ -779,6 +779,9 @@ class DotBoxMonitor {
         const emptyState = document.getElementById('emptyState');
         if (!servicesContainer) return;
 
+        const viewSettings = getViewSettings();
+        const groupByCategory = viewSettings.groupByCategory;
+
         // Flatten all services from all categories into one array
         const allServices = [];
         Object.values(this.services).forEach(categoryServices => {
@@ -802,48 +805,51 @@ class DotBoxMonitor {
             emptyState.classList.add('hidden');
         }
 
-        const servicesHtml = allServices.map(service => {
-            const statusClass = service.status || 'unknown';
-            const statusText = service.status === 'healthy' ? 'Healthy' : 
-                              service.status === 'warning' ? 'Warning' :
-                              service.status === 'unhealthy' ? 'Unhealthy' : 'Unknown';
-            
-            // Use database ID first, fallback to name-based ID for consistency
-            const serviceId = service.id ? service.id.toString() : service.name.toLowerCase().replace(/\s+/g, '-');
-            
-            return `
-                <div class="service-card ${statusClass}" data-service-id="${serviceId}">
-                    <div class="service-info">
-                        <div class="service-icon">${service.icon || '🔧'}</div>
-                        <div class="service-details">
-                            <div class="service-name">${service.name}</div>
-                            <div class="service-status value ${statusClass}">${statusText}</div>
-                        </div>
-                    </div>
-                    
-                    <div class="service-stats">
-                        <div class="service-uptime value">${service.uptime || 0}%</div>
-                        <div class="service-timestamp value">${service.timestamp ? new Date(service.timestamp).toLocaleTimeString() : 'Never'}</div>
-                    </div>
-                    
-                    <div class="service-actions">
-                        <button class="btn-icon info" onclick="monitor.showServiceDetail('${serviceId}')" title="Show details">
-                            ℹ
-                        </button>
-                        ${service.visit_url ? `
-                            <a href="${service.visit_url}" target="_blank" class="btn-icon link" title="Open service">
-                                🔗
-                            </a>
-                        ` : ''}
+        let servicesHtml = '';
+        if (groupByCategory) {
+            // Each category is its own group/grid
+            Object.entries(this.services).forEach(([category, services]) => {
+                if (!Array.isArray(services) || services.length === 0) return;
+                servicesHtml += `<div class="category-group">
+                    <div class="category-label">${category}</div>
+                    <div class="services-container">${services.map(service => this.renderServiceCardHtml(service)).join('')}</div>
+                </div>`;
+            });
+            servicesContainer.innerHTML = servicesHtml;
+        } else {
+            // Flat list/grid, no category labels
+            servicesHtml = allServices.map(service => this.renderServiceCardHtml(service)).join('');
+            servicesContainer.innerHTML = servicesHtml;
+        }
+        this.cleanupOrphanedCharts();
+    }
+
+    // Helper to render a service card as HTML
+    renderServiceCardHtml(service) {
+        const statusClass = service.status || 'unknown';
+        const statusText = service.status === 'healthy' ? 'Healthy' : 
+                          service.status === 'warning' ? 'Warning' :
+                          service.status === 'unhealthy' ? 'Unhealthy' : 'Unknown';
+        const serviceId = service.id ? service.id.toString() : service.name.toLowerCase().replace(/\s+/g, '-');
+        return `
+            <div class="service-card ${statusClass}" data-service-id="${serviceId}">
+                <div class="service-info">
+                    <div class="service-icon">${service.icon || '🔧'}</div>
+                    <div class="service-details">
+                        <div class="service-name">${service.name}</div>
+                        <div class="service-status value ${statusClass}">${statusText}</div>
                     </div>
                 </div>
-            `;
-        }).join('');
-
-        servicesContainer.innerHTML = servicesHtml;
-        
-        // Make sure charts are cleaned up for services that no longer exist
-        this.cleanupOrphanedCharts();
+                <div class="service-stats">
+                    <div class="service-uptime value">${service.uptime || 0}%</div>
+                    <div class="service-timestamp value">${service.timestamp ? new Date(service.timestamp).toLocaleTimeString() : 'Never'}</div>
+                </div>
+                <div class="service-actions">
+                    <button class="btn-icon info" onclick="monitor.showServiceDetail('${serviceId}')" title="Show details">ℹ</button>
+                    ${service.visit_url ? `<a href="${service.visit_url}" target="_blank" class="btn-icon link" title="Open service">🔗</a>` : ''}
+                </div>
+            </div>
+        `;
     }
 
     cleanupOrphanedCharts() {
@@ -1710,6 +1716,158 @@ async function loadMinCheckInterval() {
     } catch (error) {
         console.warn('Failed to load min check interval setting:', error);
     }
+}
+
+// --- View Settings ---
+const VIEW_SETTINGS_KEY = 'dotbox-view-settings';
+
+function getViewSettings() {
+    const defaults = {
+        groupByCategory: true,
+        boxSize: 'large',
+        viewMode: 'grid',
+        showDetails: true
+    };
+    try {
+        return { ...defaults, ...JSON.parse(localStorage.getItem(VIEW_SETTINGS_KEY) || '{}') };
+    } catch {
+        return defaults;
+    }
+}
+
+function setViewSettings(settings) {
+    localStorage.setItem(VIEW_SETTINGS_KEY, JSON.stringify(settings));
+}
+
+function applyViewSettings() {
+    const settings = getViewSettings();
+    document.body.classList.toggle('group-by-category', settings.groupByCategory);
+    document.body.classList.toggle('box-size-small', settings.boxSize === 'small');
+    document.body.classList.toggle('view-list', settings.viewMode === 'list');
+    document.body.classList.toggle('hide-details', !settings.showDetails);
+    if (window.monitor) window.monitor.renderHealthServices();
+}
+
+function createViewSettingsPopover() {
+    if (document.getElementById('viewSettingsBtn')) return; // Already exists
+    const btn = document.createElement('button');
+    btn.id = 'viewSettingsBtn';
+    btn.title = 'View Settings';
+    btn.innerHTML = '👁️';
+    btn.className = 'navbar-btn';
+
+    const popover = document.createElement('div');
+    popover.id = 'viewSettingsPopover';
+    popover.className = 'view-settings-popover hidden';
+    popover.innerHTML = `
+      <div class="form-group"><label><input type="checkbox" id="vsGroupByCategory"> Group by Category</label></div>
+      <div class="form-group"><label>Box Size:
+        <select id="vsBoxSize">
+          <option value="large">Large</option>
+          <option value="small">Small</option>
+        </select>
+      </label></div>
+      <div class="form-group"><label>View Mode:
+        <select id="vsViewMode">
+          <option value="grid">Grid</option>
+          <option value="list">List</option>
+        </select>
+      </label></div>
+      <div class="form-group"><label><input type="checkbox" id="vsShowDetails"> Show Details</label></div>
+    `;
+
+    // Place button in navbar-actions after settings button
+    const navbarActions = document.querySelector('.navbar-actions');
+    if (navbarActions) {
+        const settingsBtn = navbarActions.querySelector('.navbar-btn[title="Settings"]');
+        if (settingsBtn && settingsBtn.nextSibling) {
+            navbarActions.insertBefore(btn, settingsBtn.nextSibling);
+        } else {
+            navbarActions.appendChild(btn);
+        }
+        navbarActions.appendChild(popover);
+    }
+
+    btn.onclick = (e) => {
+        e.stopPropagation();
+        popover.classList.toggle('hidden');
+        if (!popover.classList.contains('hidden')) {
+            const rect = btn.getBoundingClientRect();
+            // Default left/top
+            let left = rect.left;
+            let top = rect.bottom + 8;
+            // Clamp right edge
+            const popoverWidth = 260; // match min-width in CSS
+            if (left + popoverWidth > window.innerWidth - 12) {
+                left = window.innerWidth - popoverWidth - 12;
+            }
+            popover.style.left = left + 'px';
+            popover.style.top = top + 'px';
+        }
+        updateViewSettingsUI();
+    };
+    document.addEventListener('click', (e) => {
+        if (!popover.contains(e.target) && e.target !== btn) {
+            popover.classList.add('hidden');
+        }
+    });
+
+    // Bind controls
+    popover.querySelector('#vsGroupByCategory').onchange = (e) => {
+        const s = getViewSettings();
+        s.groupByCategory = e.target.checked;
+        setViewSettings(s);
+        applyViewSettings();
+    };
+    popover.querySelector('#vsBoxSize').onchange = (e) => {
+        const s = getViewSettings();
+        s.boxSize = e.target.value;
+        setViewSettings(s);
+        applyViewSettings();
+    };
+    popover.querySelector('#vsViewMode').onchange = (e) => {
+        const s = getViewSettings();
+        s.viewMode = e.target.value;
+        setViewSettings(s);
+        applyViewSettings();
+    };
+    popover.querySelector('#vsShowDetails').onchange = (e) => {
+        const s = getViewSettings();
+        s.showDetails = e.target.checked;
+        setViewSettings(s);
+        applyViewSettings();
+    };
+
+    function updateViewSettingsUI() {
+        const s = getViewSettings();
+        popover.querySelector('#vsGroupByCategory').checked = s.groupByCategory;
+        popover.querySelector('#vsBoxSize').value = s.boxSize;
+        popover.querySelector('#vsViewMode').value = s.viewMode;
+        popover.querySelector('#vsShowDetails').checked = s.showDetails;
+    }
+}
+
+function insertViewSettingsButtonInNavbar() {
+    // Wait for navbar to be ready
+    const tryInsert = () => {
+        const navbarActions = document.querySelector('.navbar-actions');
+        if (!navbarActions) return setTimeout(tryInsert, 100);
+        // Only insert if not already present
+        if (document.getElementById('viewSettingsBtn')) return;
+        createViewSettingsPopover();
+    };
+    tryInsert();
+}
+
+// After DOMContentLoaded and after NavBar is initialized
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', () => {
+        insertViewSettingsButtonInNavbar();
+        applyViewSettings();
+    });
+} else {
+    insertViewSettingsButtonInNavbar();
+    applyViewSettings();
 }
 
 // Initialize the application

@@ -1107,4 +1107,100 @@ canvas[id^="status-chart-"] {
     font-family: 'JetBrains Mono', 'Fira Mono', 'Menlo', 'Consolas', monospace;
     font-variant-numeric: tabular-nums;
     letter-spacing: 0.01em;
+}
+
+.view-settings-popover {
+    position: absolute;
+    top: 60px;
+    right: 2rem;
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    padding: 1.25rem 1.5rem;
+    z-index: 10001;
+    box-shadow: 0 4px 24px rgba(0,0,0,0.2);
+    min-width: 240px;
+    color: var(--text-primary);
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.view-settings-popover .form-group {
+    margin-bottom: 0.5rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+}
+
+.view-settings-popover label {
+    color: var(--text-primary);
+    font-size: 0.95em;
+    font-weight: 500;
+    display: flex;
+    align-items: center;
+    gap: 0.5em;
+}
+
+.view-settings-popover input[type="checkbox"] {
+    accent-color: var(--accent-blue);
+    width: 1.1em;
+    height: 1.1em;
+    margin-right: 0.5em;
+}
+
+.view-settings-popover select {
+    background: var(--bg-tertiary);
+    color: var(--text-primary);
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    padding: 0.4em 0.7em;
+    font-size: 1em;
+    margin-top: 0.2em;
+}
+
+/* Hide popover by default */
+.view-settings-popover.hidden {
+    display: none !important;
+}
+
+/* Demo styles for toggles */
+body.box-size-small .service-card {
+    font-size: 0.92em;
+    padding: 0.4rem 0.6rem;
+    min-height: 40px;
+}
+
+body.view-list .services-container {
+    display: block !important;
+}
+body.view-list .service-card {
+    display: flex;
+    flex-direction: row;
+    width: 100%;
+    margin-bottom: 0.5rem;
+}
+
+body.hide-details .service-stats,
+body.hide-details .service-timestamp,
+body.hide-details .service-uptime {
+    display: none !important;
+}
+
+.category-group {
+    margin-bottom: 2.5rem;
+}
+
+.category-label {
+    margin: 0 0 0.5rem 0;
+    font-weight: 700;
+    font-size: 1.1em;
+    color: var(--accent-blue);
+    letter-spacing: 0.01em;
+}
+
+.category-group .services-container {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+    gap: 1.5rem;
 } 
